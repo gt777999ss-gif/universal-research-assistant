@@ -11,6 +11,11 @@ from fastapi.responses import HTMLResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from analyzers.opportunity_analyzer import analyze_opportunities
+from analyzers.report_builder import build_executive_summary, build_markdown_report, save_markdown_report
+from analyzers.risk_analyzer import analyze_risks
+from analyzers.theme_extractor import extract_themes, source_breakdown
+from analyzers.trend_analyzer import analyze_trends
 from collectors import COLLECTORS
 from exporters.csv_exporter import export_csv
 from models import SearchResult
@@ -22,6 +27,7 @@ from processors.summarizer import summarize_results
 
 
 SourceName = Literal["youtube", "x", "tiktok", "reddit", "google_news", "web", "manual_csv"]
+AnalysisType = Literal["general", "trend", "market", "competitor", "customer_feedback", "risk", "opportunity"]
 DEFAULT_SOURCES: List[SourceName] = ["google_news", "web"]
 ALL_SOURCES: List[SourceName] = ["google_news", "reddit", "youtube", "x", "tiktok", "web", "manual_csv"]
 
@@ -31,7 +37,7 @@ class HealthResponse(BaseModel):
     service: str = Field(..., description="Service identifier.", examples=["universal-research-assistant"])
 
 
-class SearchRequest(BaseModel):
+class ResearchRequest(BaseModel):
     query: Optional[str] = Field(
         default=None,
         min_length=1,
@@ -67,10 +73,14 @@ class SearchRequest(BaseModel):
         return [" ".join(item.split()) for item in value if item and item.strip()]
 
     @model_validator(mode="after")
-    def require_query_or_queries(self) -> "SearchRequest":
+    def require_query_or_queries(self) -> "ResearchRequest":
         if not self.query and not self.queries:
             raise ValueError("Provide either query or queries.")
         return self
+
+
+class SearchRequest(ResearchRequest):
+    include_analysis: bool = Field(default=False, description="Include a lightweight deterministic analysis summary.")
 
 
 class SearchResponse(BaseModel):
@@ -80,6 +90,98 @@ class SearchResponse(BaseModel):
     warnings: List[str] = Field(default_factory=list)
     results: List[SearchResult]
     exports: Dict[str, str] = Field(default_factory=dict)
+    analysis: Optional[Dict[str, Any]] = None
+
+
+class AnalysisRequest(ResearchRequest):
+    analysis_type: AnalysisType = "general"
+    output_language: str = Field(default="auto", description="auto, English, Chinese, or a language code.")
+
+
+class Finding(BaseModel):
+    title: str
+    summary: str
+    supporting_sources: List[str] = Field(default_factory=list)
+    confidence: str = "low"
+
+
+class TrendItem(BaseModel):
+    trend: str
+    explanation: str
+    evidence: List[str] = Field(default_factory=list)
+    confidence: str = "low"
+
+
+class RiskItem(BaseModel):
+    risk: str
+    explanation: str
+    evidence: List[str] = Field(default_factory=list)
+
+
+class OpportunityItem(BaseModel):
+    opportunity: str
+    explanation: str
+    evidence: List[str] = Field(default_factory=list)
+
+
+class SourceBreakdownItem(BaseModel):
+    source: str
+    result_count: int
+    major_topics: List[str] = Field(default_factory=list)
+
+
+class AnalysisResponse(BaseModel):
+    query: str = ""
+    queries: List[str] = Field(default_factory=list)
+    analysis_type: AnalysisType
+    sources: List[str]
+    warnings: List[str] = Field(default_factory=list)
+    executive_summary: str
+    key_findings: List[Finding] = Field(default_factory=list)
+    trends: List[TrendItem] = Field(default_factory=list)
+    risks: List[RiskItem] = Field(default_factory=list)
+    opportunities: List[OpportunityItem] = Field(default_factory=list)
+    source_breakdown: List[SourceBreakdownItem] = Field(default_factory=list)
+    top_results: List[SearchResult] = Field(default_factory=list)
+    recommended_follow_up_queries: List[str] = Field(default_factory=list)
+    markdown_report: str = ""
+
+
+class ReportResponse(BaseModel):
+    query: str = ""
+    report_title: str
+    markdown_report: str
+    results_count: int
+    warnings: List[str] = Field(default_factory=list)
+    export_path: str = ""
+
+
+class BatchTask(BaseModel):
+    query: str
+    analysis_type: AnalysisType = "general"
+    sources: List[SourceName] = Field(default=DEFAULT_SOURCES)
+    days: int = Field(default=30, ge=1, le=365)
+    limit: int = Field(default=20, ge=1, le=100)
+    language: str = "any"
+    country: str = "any"
+
+
+class BatchRequest(BaseModel):
+    tasks: List[BatchTask]
+    output_language: str = "auto"
+
+
+class BatchTaskResponse(BaseModel):
+    query: str
+    analysis_type: AnalysisType
+    executive_summary: str
+    key_findings: List[Finding] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+
+
+class BatchResponse(BaseModel):
+    tasks: List[BatchTaskResponse]
+    combined_markdown_report: str
 
 
 class SourceStatus(BaseModel):
@@ -239,6 +341,114 @@ def verify_api_key(request: Request, api_key: Optional[str] = Security(api_key_h
     },
 )
 async def search(request: SearchRequest) -> SearchResponse:
+    pipeline = await run_search_pipeline(request)
+    exports: Dict[str, str] = {}
+    timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    if request.export_csv:
+        exports["csv"] = export_csv(pipeline["results"], f"reports/{timestamp}-results.csv")
+    if request.export_markdown:
+        exports["markdown"] = export_markdown(", ".join(pipeline["original_queries"]), pipeline["results"], f"reports/{timestamp}-results.md")
+
+    return SearchResponse(
+        query=request.query or "",
+        queries=request.queries,
+        sources=pipeline["sources"],
+        warnings=pipeline["warnings"],
+        results=pipeline["results"],
+        exports=exports,
+        analysis=lightweight_analysis(pipeline) if request.include_analysis else None,
+    )
+
+
+@app.post(
+    "/analyze",
+    response_model=AnalysisResponse,
+    operation_id="analyzePublicInformation",
+    summary="Analyze public information",
+    description="Runs the public information search pipeline and returns a deterministic structured analysis report.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def analyze(request: AnalysisRequest) -> AnalysisResponse:
+    pipeline = await run_search_pipeline(request)
+    return build_analysis_response(request, pipeline)
+
+
+@app.post(
+    "/report",
+    response_model=ReportResponse,
+    operation_id="generateResearchReport",
+    summary="Generate a Markdown research report",
+    description="Runs public information search and deterministic analysis, then returns a Markdown report.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def report(request: AnalysisRequest) -> ReportResponse:
+    pipeline = await run_search_pipeline(request)
+    analysis = build_analysis_response(request, pipeline)
+    export_path = save_markdown_report(analysis.markdown_report) if request.export_markdown else ""
+    query_label = query_label_from_request(request)
+    return ReportResponse(
+        query=query_label,
+        report_title=f"Research Report: {query_label}",
+        markdown_report=analysis.markdown_report,
+        results_count=len(analysis.top_results),
+        warnings=analysis.warnings,
+        export_path=export_path,
+    )
+
+
+@app.post(
+    "/batch",
+    response_model=BatchResponse,
+    operation_id="batchResearchTasks",
+    summary="Run multiple research analysis tasks",
+    description="Runs multiple public information research tasks and returns concise deterministic analysis summaries.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def batch(request: BatchRequest) -> BatchResponse:
+    task_outputs: List[BatchTaskResponse] = []
+    report_sections: List[str] = ["# Combined Research Report", ""]
+    for task in request.tasks:
+        analysis_request = AnalysisRequest(
+            query=task.query,
+            sources=task.sources,
+            days=task.days,
+            limit=task.limit,
+            language=task.language,
+            country=task.country,
+            analysis_type=task.analysis_type,
+            output_language=request.output_language,
+        )
+        pipeline = await run_search_pipeline(analysis_request)
+        analysis = build_analysis_response(analysis_request, pipeline)
+        task_outputs.append(
+            BatchTaskResponse(
+                query=task.query,
+                analysis_type=task.analysis_type,
+                executive_summary=analysis.executive_summary,
+                key_findings=analysis.key_findings,
+                warnings=analysis.warnings,
+            )
+        )
+        report_sections.extend([f"## {task.query}", "", analysis.executive_summary, "", analysis.markdown_report, ""])
+    return BatchResponse(tasks=task_outputs, combined_markdown_report="\n".join(report_sections))
+
+
+async def collect_source(
+    source: str,
+    collector,
+    query: str,
+    days: int,
+    limit: int,
+    language: str,
+    country: str,
+) -> Tuple[List[SearchResult], List[str]]:
+    try:
+        return await collector(query, days, limit, language, country), []
+    except Exception as exc:
+        return [], [f"{source} failed for query '{query}': {exc}"]
+
+
+async def run_search_pipeline(request: ResearchRequest) -> Dict[str, Any]:
     original_queries = request.queries or ([request.query] if request.query else [])
     search_queries = expand_search_queries(original_queries)
     selected_sources = request.sources or DEFAULT_SOURCES
@@ -256,11 +466,11 @@ async def search(request: SearchRequest) -> SearchResponse:
     )
 
     raw_results: List[Dict[str, Any]] = []
-    for batch in batches:
-        if isinstance(batch, Exception):
-            warnings.append(f"A source request failed: {batch}")
+    for batch_result in batches:
+        if isinstance(batch_result, Exception):
+            warnings.append(f"A source request failed: {batch_result}")
             continue
-        results, batch_warnings = batch
+        results, batch_warnings = batch_result
         warnings.extend(batch_warnings)
         raw_results.extend(result.model_dump() if hasattr(result, "model_dump") else result for result in results)
 
@@ -269,38 +479,67 @@ async def search(request: SearchRequest) -> SearchResponse:
     deduped = dedupe_results(filtered)
     ranked = rank_results(deduped, ranking_query)[: request.limit]
     tagged = add_result_metadata(ranked, ranking_query)
-    summarized = summarize_results(ranked, settings.get("processing", {}).get("max_summary_chars", 500))
+    summarized = summarize_results(tagged, settings.get("processing", {}).get("max_summary_chars", 500))
+    return {
+        "original_queries": original_queries,
+        "search_queries": search_queries,
+        "ranking_query": ranking_query,
+        "sources": selected_sources,
+        "warnings": unique_strings(warnings),
+        "results": summarized,
+    }
 
-    exports: Dict[str, str] = {}
-    timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-    if request.export_csv:
-        exports["csv"] = export_csv(summarized, f"reports/{timestamp}-results.csv")
-    if request.export_markdown:
-        exports["markdown"] = export_markdown(", ".join(original_queries), summarized, f"reports/{timestamp}-results.md")
 
-    return SearchResponse(
+def build_analysis_response(request: AnalysisRequest, pipeline: Dict[str, Any]) -> AnalysisResponse:
+    results = pipeline["results"]
+    output_language = resolve_output_language(request, pipeline["original_queries"])
+    query_label = query_label_from_request(request)
+    themes = extract_themes(results)
+    trends = analyze_trends(results, themes)
+    risks = analyze_risks(results)
+    opportunities = analyze_opportunities(results, themes)
+    breakdown = source_breakdown(results, themes)
+    executive_summary = build_executive_summary(query_label, results, themes, output_language)
+    markdown_report = build_markdown_report(
+        title=f"Research Analysis: {query_label}",
+        executive_summary=executive_summary,
+        key_findings=themes,
+        trends=trends,
+        risks=risks,
+        opportunities=opportunities,
+        source_breakdown=breakdown,
+        top_results=results,
+    )
+    return AnalysisResponse(
         query=request.query or "",
         queries=request.queries,
-        sources=selected_sources,
-        warnings=unique_strings(warnings),
-        results=tagged,
-        exports=exports,
+        analysis_type=request.analysis_type,
+        sources=pipeline["sources"],
+        warnings=pipeline["warnings"],
+        executive_summary=executive_summary,
+        key_findings=[Finding(**item) for item in themes],
+        trends=[TrendItem(**item) for item in trends],
+        risks=[RiskItem(**item) for item in risks],
+        opportunities=[OpportunityItem(**item) for item in opportunities],
+        source_breakdown=[SourceBreakdownItem(**item) for item in breakdown],
+        top_results=[SearchResult(**item) if isinstance(item, dict) else item for item in results[:10]],
+        recommended_follow_up_queries=recommended_followups(query_label, themes, request.analysis_type, output_language),
+        markdown_report=markdown_report,
     )
 
 
-async def collect_source(
-    source: str,
-    collector,
-    query: str,
-    days: int,
-    limit: int,
-    language: str,
-    country: str,
-) -> Tuple[List[SearchResult], List[str]]:
-    try:
-        return await collector(query, days, limit, language, country), []
-    except Exception as exc:
-        return [], [f"{source} failed for query '{query}': {exc}"]
+def lightweight_analysis(pipeline: Dict[str, Any]) -> Dict[str, Any]:
+    themes = extract_themes(pipeline["results"], limit=5)
+    return {
+        "executive_summary": build_executive_summary(
+            ", ".join(pipeline["original_queries"]),
+            pipeline["results"],
+            themes,
+            "English",
+        ),
+        "key_themes": [item["title"] for item in themes],
+        "source_breakdown": source_breakdown(pipeline["results"], themes),
+    }
 
 
 def source_status(source: SourceName) -> SourceStatus:
@@ -389,6 +628,33 @@ def add_result_metadata(results: List[Dict[str, Any]], query: str) -> List[Dict[
         tags.extend(term for term in query_terms[:5] if term not in tags)
         result["tags"] = tags
     return results
+
+
+def query_label_from_request(request: ResearchRequest) -> str:
+    queries = request.queries or ([request.query] if request.query else [])
+    return ", ".join(queries)
+
+
+def resolve_output_language(request: AnalysisRequest, queries: List[str]) -> str:
+    if request.output_language.lower() != "auto":
+        return request.output_language
+    joined = " ".join(queries)
+    return "Chinese" if any("\u4e00" <= char <= "\u9fff" for char in joined) else "English"
+
+
+def recommended_followups(query_label: str, themes: List[Dict[str, Any]], analysis_type: str, language: str) -> List[str]:
+    theme_terms = [item["title"] for item in themes[:3]]
+    if language.lower().startswith("chinese") or language.lower() in {"zh", "zh-cn"}:
+        base = [f"{query_label} 最新趋势", f"{query_label} 用户反馈", f"{query_label} 风险"]
+        return base + [f"{term} 深度分析" for term in theme_terms]
+    base = [
+        f"{query_label} latest trends",
+        f"{query_label} user feedback",
+        f"{query_label} risks and concerns",
+    ]
+    if analysis_type != "general":
+        base.append(f"{query_label} {analysis_type} analysis")
+    return base + [f"{term} deep dive" for term in theme_terms]
 
 
 def unique_strings(values: List[str]) -> List[str]:

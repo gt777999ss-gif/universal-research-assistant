@@ -1,6 +1,6 @@
-# Universal AI-Powered Public Information Research Assistant V3
+# Universal AI-Powered Public Information Research Assistant V4 Professional
 
-FastAPI backend for public information research. It searches permitted public sources, filters ads/spam/duplicates, ranks relevant results, summarizes each result, and returns clean JSON.
+FastAPI backend for public information research and deterministic analysis. It searches permitted public sources, filters ads/spam/duplicates, ranks relevant results, summarizes each result, groups repeated themes, identifies trends/risks/opportunities, and returns clean JSON or Markdown reports.
 
 This is not an e-commerce recommendation system. By default it does not recommend products, suppliers, purchases, or selling strategies.
 
@@ -13,7 +13,7 @@ This is not an e-commerce recommendation system. By default it does not recommen
 - Use X/Twitter only through the official X API when `X_BEARER_TOKEN` is configured.
 - Do not login-scrape TikTok. Use manual CSV imports, licensed providers, or supported public data sources only.
 
-## V3 Features
+## V4 Professional Features
 
 - Single-query and batch-query public information search.
 - Source availability reporting through `GET /sources`.
@@ -22,8 +22,12 @@ This is not an e-commerce recommendation system. By default it does not recommen
 - Result `score` and `tags` fields for ranking context.
 - Optional CSV and Markdown exports.
 - Basic Chinese query support: original Chinese queries are preserved, and simple English search terms may be added internally when useful.
+- Structured deterministic analysis through `POST /analyze`.
+- Markdown research report generation through `POST /report`.
+- Multi-task analysis through `POST /batch`.
+- Analyzer modules for themes, trends, risks, opportunities, and report building.
 
-## V3 Source Coverage
+## V4 Source Coverage
 
 Each source has its own collector module and returns a common `SearchResult` model. If one source is unavailable or not configured, the API continues searching the remaining sources.
 
@@ -38,6 +42,21 @@ Each source has its own collector module and returns a common `SearchResult` mod
 | `manual_csv` | `collectors/manual_csv_collector.py` | Optional public-data CSV import. |
 
 Results are merged, filtered for spam/ads/irrelevance, deduplicated by URL and similar titles, then sorted by relevance and recency. Missing optional API keys produce warnings instead of request failures.
+
+## Analyzer Modules
+
+V4 analysis is deterministic and does not require OpenAI or other LLM API keys.
+
+```text
+analyzers/
+├── theme_extractor.py
+├── trend_analyzer.py
+├── risk_analyzer.py
+├── opportunity_analyzer.py
+└── report_builder.py
+```
+
+The analyzers use keyword frequency, repeated phrases, source counts, recency, engagement signals, and title/summary clustering.
 
 ## Project Structure
 
@@ -179,6 +198,7 @@ curl -X POST http://127.0.0.1:8000/search \
 - Supports `query`, `queries`, `sources`, `days`, `language`, `country`, and `limit`.
 - Provide either `query` or `queries`.
 - Defaults are `sources: ["google_news", "web"]`, `days: 30`, `limit: 10`, `language: "any"`, and `country: "any"`.
+- Optional `include_analysis: true` adds a lightweight analysis summary to the search response.
 
 Single-query request:
 
@@ -242,6 +262,85 @@ Response:
 
 Core result fields include source, title, URL, summary, published date or indexed date, image URL when available, score, and tags.
 
+`POST /analyze`
+
+- Requires `X-API-Key`.
+- Runs the search pipeline, deduplicates results, groups themes, identifies trends/risks/opportunities, and returns structured analysis.
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:8000/analyze \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: local-dev-secret" \
+  -d '{
+    "query": "AI video tools",
+    "sources": ["google_news", "reddit", "youtube", "web"],
+    "days": 30,
+    "limit": 20,
+    "analysis_type": "trend",
+    "output_language": "auto"
+  }'
+```
+
+Supported `analysis_type` values:
+
+```text
+general, trend, market, competitor, customer_feedback, risk, opportunity
+```
+
+`POST /report`
+
+- Requires `X-API-Key`.
+- Generates a Markdown research report from search and analysis results.
+- If `export_markdown` is true, saves the report under `reports/YYYY-MM-DD/`.
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:8000/report \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: local-dev-secret" \
+  -d '{
+    "query": "AI video tools",
+    "sources": ["google_news", "web"],
+    "limit": 20,
+    "export_markdown": true
+  }'
+```
+
+`POST /batch`
+
+- Requires `X-API-Key`.
+- Runs multiple research analysis tasks in one request.
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:8000/batch \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: local-dev-secret" \
+  -d '{
+    "tasks": [
+      {
+        "query": "AI video tools",
+        "analysis_type": "trend",
+        "sources": ["google_news", "reddit", "youtube"],
+        "days": 30,
+        "limit": 20
+      },
+      {
+        "query": "TikTok Shop Thailand pet products",
+        "analysis_type": "market",
+        "sources": ["google_news", "web", "reddit"],
+        "days": 30,
+        "limit": 20
+      }
+    ],
+    "output_language": "auto"
+  }'
+```
+
 Optional exports:
 
 ```json
@@ -286,7 +385,7 @@ python3 scripts/export_openapi.py
 The generated schema includes:
 
 - Production server: `https://universal-research-assistant.onrender.com`
-- `X-API-Key` header authentication for `/search`
+- `X-API-Key` header authentication for `/search`, `/analyze`, `/report`, and `/batch`
 - Public `/health`, `/privacy`, and `/sources` endpoints with `security: []`
 
 ## Example ChatGPT Prompts
@@ -313,6 +412,18 @@ Batch search these topics: AI video tools, AI agent tools, and TikTok Shop Thail
 
 ```text
 搜索最近关于 AI 视频工具的公开信息。
+```
+
+```text
+Analyze recent customer complaints about automatic pet feeders using Google News and Reddit.
+```
+
+```text
+Generate a Markdown report about TikTok Shop Thailand pet products.
+```
+
+```text
+Run batch research for AI video tools and AI agent tools, then summarize trends and risks.
 ```
 
 ## Deploy To Render

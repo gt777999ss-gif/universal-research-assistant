@@ -3,7 +3,7 @@
   "info": {
     "title": "Universal Public Information Research Assistant",
     "description": "Universal public information research assistant. It searches permitted public sources, filters spam and duplicates, ranks relevant results, and returns clean JSON. It does not recommend products, suppliers, purchases, or sales strategies unless explicitly asked.",
-    "version": "3.0.0"
+    "version": "4.0.0"
   },
   "servers": [
     {
@@ -144,10 +144,568 @@
           }
         ]
       }
+    },
+    "/analyze": {
+      "post": {
+        "summary": "Analyze public information",
+        "description": "Runs the public information search pipeline and returns a deterministic structured analysis report.",
+        "operationId": "analyzePublicInformation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/report": {
+      "post": {
+        "summary": "Generate a Markdown research report",
+        "description": "Runs public information search and deterministic analysis, then returns a Markdown report.",
+        "operationId": "generateResearchReport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/batch": {
+      "post": {
+        "summary": "Run multiple research analysis tasks",
+        "description": "Runs multiple public information research tasks and returns concise deterministic analysis summaries.",
+        "operationId": "batchResearchTasks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
     }
   },
   "components": {
     "schemas": {
+      "AnalysisRequest": {
+        "properties": {
+          "query": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query",
+            "description": "Natural language public information search request. Provide either query or queries.",
+            "examples": [
+              "Find recent Reddit discussions and Google News articles about AI search tools."
+            ]
+          },
+          "queries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Queries",
+            "description": "Batch search queries. If provided, every query is searched and results are merged.",
+            "examples": [
+              [
+                "AI video tools",
+                "AI agent tools",
+                "TikTok Shop Thailand pet products"
+              ]
+            ]
+          },
+          "sources": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "youtube",
+                "x",
+                "tiktok",
+                "reddit",
+                "google_news",
+                "web",
+                "manual_csv"
+              ]
+            },
+            "type": "array",
+            "title": "Sources",
+            "description": "Sources to search. Defaults to Google News and general web search.",
+            "default": [
+              "google_news",
+              "web"
+            ],
+            "examples": [
+              [
+                "google_news",
+                "web"
+              ]
+            ]
+          },
+          "days": {
+            "type": "integer",
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Days",
+            "description": "Search recency window in days.",
+            "default": 30
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "description": "Maximum number of results to return.",
+            "default": 10
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 2,
+            "title": "Language",
+            "description": "Language code or 'any'.",
+            "default": "any"
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 2,
+            "title": "Country",
+            "description": "Country/region code or 'any'.",
+            "default": "any"
+          },
+          "export_csv": {
+            "type": "boolean",
+            "title": "Export Csv",
+            "description": "When true, also write a CSV report under reports/.",
+            "default": false
+          },
+          "export_markdown": {
+            "type": "boolean",
+            "title": "Export Markdown",
+            "description": "When true, also write a Markdown report under reports/.",
+            "default": false
+          },
+          "analysis_type": {
+            "type": "string",
+            "enum": [
+              "general",
+              "trend",
+              "market",
+              "competitor",
+              "customer_feedback",
+              "risk",
+              "opportunity"
+            ],
+            "title": "Analysis Type",
+            "default": "general"
+          },
+          "output_language": {
+            "type": "string",
+            "title": "Output Language",
+            "description": "auto, English, Chinese, or a language code.",
+            "default": "auto"
+          }
+        },
+        "type": "object",
+        "title": "AnalysisRequest"
+      },
+      "AnalysisResponse": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query",
+            "default": ""
+          },
+          "queries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Queries"
+          },
+          "analysis_type": {
+            "type": "string",
+            "enum": [
+              "general",
+              "trend",
+              "market",
+              "competitor",
+              "customer_feedback",
+              "risk",
+              "opportunity"
+            ],
+            "title": "Analysis Type"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "executive_summary": {
+            "type": "string",
+            "title": "Executive Summary"
+          },
+          "key_findings": {
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            },
+            "type": "array",
+            "title": "Key Findings"
+          },
+          "trends": {
+            "items": {
+              "$ref": "#/components/schemas/TrendItem"
+            },
+            "type": "array",
+            "title": "Trends"
+          },
+          "risks": {
+            "items": {
+              "$ref": "#/components/schemas/RiskItem"
+            },
+            "type": "array",
+            "title": "Risks"
+          },
+          "opportunities": {
+            "items": {
+              "$ref": "#/components/schemas/OpportunityItem"
+            },
+            "type": "array",
+            "title": "Opportunities"
+          },
+          "source_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/SourceBreakdownItem"
+            },
+            "type": "array",
+            "title": "Source Breakdown"
+          },
+          "top_results": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResult"
+            },
+            "type": "array",
+            "title": "Top Results"
+          },
+          "recommended_follow_up_queries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recommended Follow Up Queries"
+          },
+          "markdown_report": {
+            "type": "string",
+            "title": "Markdown Report",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "analysis_type",
+          "sources",
+          "executive_summary"
+        ],
+        "title": "AnalysisResponse"
+      },
+      "BatchRequest": {
+        "properties": {
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/BatchTask"
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "output_language": {
+            "type": "string",
+            "title": "Output Language",
+            "default": "auto"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tasks"
+        ],
+        "title": "BatchRequest"
+      },
+      "BatchResponse": {
+        "properties": {
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/BatchTaskResponse"
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "combined_markdown_report": {
+            "type": "string",
+            "title": "Combined Markdown Report"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tasks",
+          "combined_markdown_report"
+        ],
+        "title": "BatchResponse"
+      },
+      "BatchTask": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "analysis_type": {
+            "type": "string",
+            "enum": [
+              "general",
+              "trend",
+              "market",
+              "competitor",
+              "customer_feedback",
+              "risk",
+              "opportunity"
+            ],
+            "title": "Analysis Type",
+            "default": "general"
+          },
+          "sources": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "youtube",
+                "x",
+                "tiktok",
+                "reddit",
+                "google_news",
+                "web",
+                "manual_csv"
+              ]
+            },
+            "type": "array",
+            "title": "Sources",
+            "default": [
+              "google_news",
+              "web"
+            ]
+          },
+          "days": {
+            "type": "integer",
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Days",
+            "default": 30
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 20
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "any"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country",
+            "default": "any"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "BatchTask"
+      },
+      "BatchTaskResponse": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "analysis_type": {
+            "type": "string",
+            "enum": [
+              "general",
+              "trend",
+              "market",
+              "competitor",
+              "customer_feedback",
+              "risk",
+              "opportunity"
+            ],
+            "title": "Analysis Type"
+          },
+          "executive_summary": {
+            "type": "string",
+            "title": "Executive Summary"
+          },
+          "key_findings": {
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            },
+            "type": "array",
+            "title": "Key Findings"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "analysis_type",
+          "executive_summary"
+        ],
+        "title": "BatchTaskResponse"
+      },
+      "Finding": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "supporting_sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Supporting Sources"
+          },
+          "confidence": {
+            "type": "string",
+            "title": "Confidence",
+            "default": "low"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "summary"
+        ],
+        "title": "Finding"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -186,6 +744,96 @@
           "service"
         ],
         "title": "HealthResponse"
+      },
+      "OpportunityItem": {
+        "properties": {
+          "opportunity": {
+            "type": "string",
+            "title": "Opportunity"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "opportunity",
+          "explanation"
+        ],
+        "title": "OpportunityItem"
+      },
+      "ReportResponse": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query",
+            "default": ""
+          },
+          "report_title": {
+            "type": "string",
+            "title": "Report Title"
+          },
+          "markdown_report": {
+            "type": "string",
+            "title": "Markdown Report"
+          },
+          "results_count": {
+            "type": "integer",
+            "title": "Results Count"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "export_path": {
+            "type": "string",
+            "title": "Export Path",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "report_title",
+          "markdown_report",
+          "results_count"
+        ],
+        "title": "ReportResponse"
+      },
+      "RiskItem": {
+        "properties": {
+          "risk": {
+            "type": "string",
+            "title": "Risk"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "risk",
+          "explanation"
+        ],
+        "title": "RiskItem"
       },
       "SearchRequest": {
         "properties": {
@@ -291,6 +939,12 @@
             "title": "Export Markdown",
             "description": "When true, also write a Markdown report under reports/.",
             "default": false
+          },
+          "include_analysis": {
+            "type": "boolean",
+            "title": "Include Analysis",
+            "description": "Include a lightweight deterministic analysis summary.",
+            "default": false
           }
         },
         "type": "object",
@@ -337,6 +991,18 @@
             },
             "type": "object",
             "title": "Exports"
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis"
           }
         },
         "type": "object",
@@ -480,6 +1146,31 @@
         "type": "object",
         "title": "SearchResult"
       },
+      "SourceBreakdownItem": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "result_count": {
+            "type": "integer",
+            "title": "Result Count"
+          },
+          "major_topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Major Topics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "result_count"
+        ],
+        "title": "SourceBreakdownItem"
+      },
       "SourceStatus": {
         "properties": {
           "name": {
@@ -537,6 +1228,36 @@
           "sources"
         ],
         "title": "SourcesResponse"
+      },
+      "TrendItem": {
+        "properties": {
+          "trend": {
+            "type": "string",
+            "title": "Trend"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "confidence": {
+            "type": "string",
+            "title": "Confidence",
+            "default": "low"
+          }
+        },
+        "type": "object",
+        "required": [
+          "trend",
+          "explanation"
+        ],
+        "title": "TrendItem"
       },
       "ValidationError": {
         "properties": {

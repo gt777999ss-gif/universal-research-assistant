@@ -14,19 +14,16 @@
   "paths": {
     "/health": {
       "get": {
-        "summary": "Health",
-        "operationId": "health_health_get",
+        "summary": "Check service health",
+        "description": "Public health check endpoint. Does not require an API key.",
+        "operationId": "getHealth",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
-                  "title": "Response Health Health Get"
+                  "$ref": "#/components/schemas/HealthResponse"
                 }
               }
             }
@@ -52,7 +49,7 @@
                     "query": "Find recent public discussions about AI search tools",
                     "sources": [
                       "google_news",
-                      "reddit"
+                      "web"
                     ],
                     "days": 30,
                     "limit": 10,
@@ -123,7 +120,159 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
-      "ResultItem": {
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Service health status.",
+            "examples": [
+              "ok"
+            ]
+          },
+          "service": {
+            "type": "string",
+            "title": "Service",
+            "description": "Service identifier.",
+            "examples": [
+              "universal-research-assistant"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "service"
+        ],
+        "title": "HealthResponse"
+      },
+      "SearchRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Query",
+            "description": "Natural language public information search request.",
+            "examples": [
+              "Find recent Reddit discussions and Google News articles about AI search tools."
+            ]
+          },
+          "sources": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "youtube",
+                "x",
+                "tiktok",
+                "reddit",
+                "google_news",
+                "web",
+                "manual_csv"
+              ]
+            },
+            "type": "array",
+            "title": "Sources",
+            "description": "Sources to search. Defaults to Google News and general web search.",
+            "default": [
+              "google_news",
+              "web"
+            ],
+            "examples": [
+              [
+                "google_news",
+                "web"
+              ]
+            ]
+          },
+          "days": {
+            "type": "integer",
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Days",
+            "description": "Search recency window in days.",
+            "default": 30
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "description": "Maximum number of results to return.",
+            "default": 10
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 2,
+            "title": "Language",
+            "description": "Language code or 'any'.",
+            "default": "any"
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 2,
+            "title": "Country",
+            "description": "Country/region code or 'any'.",
+            "default": "any"
+          },
+          "export_csv": {
+            "type": "boolean",
+            "title": "Export Csv",
+            "description": "When true, also write a CSV report under reports/.",
+            "default": false
+          },
+          "export_markdown": {
+            "type": "boolean",
+            "title": "Export Markdown",
+            "description": "When true, also write a Markdown report under reports/.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "SearchRequest"
+      },
+      "SearchResponse": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResult"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "exports": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Exports"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "sources",
+          "results"
+        ],
+        "title": "SearchResponse"
+      },
+      "SearchResult": {
         "properties": {
           "source": {
             "type": "string",
@@ -227,131 +376,7 @@
           }
         },
         "type": "object",
-        "title": "ResultItem"
-      },
-      "SearchRequest": {
-        "properties": {
-          "query": {
-            "type": "string",
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Query",
-            "description": "Natural language public information search request.",
-            "examples": [
-              "Find recent Reddit discussions and Google News articles about AI search tools."
-            ]
-          },
-          "sources": {
-            "items": {
-              "type": "string",
-              "enum": [
-                "youtube",
-                "x",
-                "tiktok",
-                "reddit",
-                "google_news",
-                "web",
-                "manual_csv"
-              ]
-            },
-            "type": "array",
-            "title": "Sources",
-            "description": "Sources to search. Leave empty to use the MVP default sources.",
-            "examples": [
-              [
-                "google_news",
-                "reddit",
-                "youtube",
-                "web"
-              ]
-            ]
-          },
-          "days": {
-            "type": "integer",
-            "maximum": 365.0,
-            "minimum": 1.0,
-            "title": "Days",
-            "description": "Search recency window in days.",
-            "default": 30
-          },
-          "limit": {
-            "type": "integer",
-            "maximum": 100.0,
-            "minimum": 1.0,
-            "title": "Limit",
-            "description": "Maximum number of results to return.",
-            "default": 50
-          },
-          "language": {
-            "type": "string",
-            "maxLength": 20,
-            "minLength": 2,
-            "title": "Language",
-            "description": "Language code or 'any'.",
-            "default": "any"
-          },
-          "country": {
-            "type": "string",
-            "maxLength": 20,
-            "minLength": 2,
-            "title": "Country",
-            "description": "Country/region code or 'any'.",
-            "default": "any"
-          },
-          "export_csv": {
-            "type": "boolean",
-            "title": "Export Csv",
-            "description": "When true, also write a CSV report under reports/.",
-            "default": false
-          },
-          "export_markdown": {
-            "type": "boolean",
-            "title": "Export Markdown",
-            "description": "When true, also write a Markdown report under reports/.",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "query"
-        ],
-        "title": "SearchRequest"
-      },
-      "SearchResponse": {
-        "properties": {
-          "query": {
-            "type": "string",
-            "title": "Query"
-          },
-          "sources": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Sources"
-          },
-          "results": {
-            "items": {
-              "$ref": "#/components/schemas/ResultItem"
-            },
-            "type": "array",
-            "title": "Results"
-          },
-          "exports": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Exports"
-          }
-        },
-        "type": "object",
-        "required": [
-          "query",
-          "sources",
-          "results"
-        ],
-        "title": "SearchResponse"
+        "title": "SearchResult"
       },
       "ValidationError": {
         "properties": {

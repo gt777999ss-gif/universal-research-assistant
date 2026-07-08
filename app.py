@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 
 import yaml
-from fastapi import Depends, FastAPI, HTTPException, Security, status
+from fastapi import Depends, FastAPI, HTTPException, Request, Security, status
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field, field_validator
 
@@ -22,6 +22,11 @@ from processors.summarizer import summarize_results
 SourceName = Literal["youtube", "x", "tiktok", "reddit", "google_news", "web", "manual_csv"]
 
 
+class HealthResponse(BaseModel):
+    status: str = Field(..., description="Service health status.", examples=["ok"])
+    service: str = Field(..., description="Service identifier.", examples=["universal-research-assistant"])
+
+
 class SearchRequest(BaseModel):
     query: str = Field(
         ...,
@@ -31,12 +36,12 @@ class SearchRequest(BaseModel):
         examples=["Find recent Reddit discussions and Google News articles about AI search tools."],
     )
     sources: List[SourceName] = Field(
-        default_factory=list,
-        description="Sources to search. Leave empty to use the MVP default sources.",
-        examples=[["google_news", "reddit", "youtube", "web"]],
+        default=["google_news", "web"],
+        description="Sources to search. Defaults to Google News and general web search.",
+        examples=[["google_news", "web"]],
     )
     days: int = Field(default=30, ge=1, le=365, description="Search recency window in days.")
-    limit: int = Field(default=50, ge=1, le=100, description="Maximum number of results to return.")
+    limit: int = Field(default=10, ge=1, le=100, description="Maximum number of results to return.")
     language: str = Field(default="any", min_length=2, max_length=20, description="Language code or 'any'.")
     country: str = Field(default="any", min_length=2, max_length=20, description="Country/region code or 'any'.")
     export_csv: bool = Field(default=False, description="When true, also write a CSV report under reports/.")
@@ -48,7 +53,7 @@ class SearchRequest(BaseModel):
         return " ".join(value.split())
 
 
-class ResultItem(BaseModel):
+class SearchResult(BaseModel):
     source: str = ""
     title: str = ""
     url: str = ""
@@ -68,7 +73,7 @@ class ResultItem(BaseModel):
 class SearchResponse(BaseModel):
     query: str
     sources: List[str]
-    results: List[ResultItem]
+    results: List[SearchResult]
     exports: Dict[str, str] = Field(default_factory=dict)
 
 
@@ -92,18 +97,25 @@ app = FastAPI(
 )
 
 
-@app.get("/health")
-async def health() -> Dict[str, str]:
-    return {"status": "ok"}
+@app.get(
+    "/health",
+    response_model=HealthResponse,
+    operation_id="getHealth",
+    summary="Check service health",
+    description="Public health check endpoint. Does not require an API key.",
+)
+async def health() -> HealthResponse:
+    return HealthResponse(status="ok", service="universal-research-assistant")
 
 
-def verify_api_key(api_key: Optional[str] = Security(api_key_header)) -> None:
+def verify_api_key(request: Request, api_key: Optional[str] = Security(api_key_header)) -> None:
     expected = os.getenv("RESEARCH_ASSISTANT_API_KEY")
     if not expected:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="RESEARCH_ASSISTANT_API_KEY is not configured.",
         )
+    api_key = api_key or request.headers.get("X-Api-Key") or request.headers.get("x-api-key")
     if api_key != expected:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or missing API key.")
 
@@ -127,7 +139,7 @@ def verify_api_key(api_key: Optional[str] = Security(api_key_header)) -> None:
                             "summary": "Recent public discussions",
                             "value": {
                                 "query": "Find recent public discussions about AI search tools",
-                                "sources": ["google_news", "reddit"],
+                                "sources": ["google_news", "web"],
                                 "days": 30,
                                 "limit": 10,
                                 "language": "any",
@@ -152,7 +164,7 @@ def verify_api_key(api_key: Optional[str] = Security(api_key_header)) -> None:
     },
 )
 async def search(request: SearchRequest) -> SearchResponse:
-    selected_sources = request.sources or ["youtube", "google_news", "reddit", "web", "manual_csv"]
+    selected_sources = request.sources or ["google_news", "web"]
     collectors = [COLLECTORS[source] for source in selected_sources if source in COLLECTORS]
     per_source_limit = max(10, min(request.limit, 100))
 

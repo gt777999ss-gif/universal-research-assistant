@@ -5,9 +5,10 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from collectors.common import http_client
+from models import SearchResult
 
 
-async def collect_youtube(query: str, days: int, limit: int, language: str, country: str) -> List[Dict[str, Any]]:
+async def collect_youtube(query: str, days: int, limit: int, language: str, country: str) -> List[SearchResult]:
     api_key = os.getenv("YOUTUBE_API_KEY")
     if not api_key:
         return []
@@ -34,7 +35,7 @@ async def collect_youtube(query: str, days: int, limit: int, language: str, coun
         video_ids = [item.get("id", {}).get("videoId") for item in items if item.get("id", {}).get("videoId")]
         stats = await fetch_video_stats(client, api_key, video_ids)
 
-    results: List[Dict[str, Any]] = []
+    results: List[SearchResult] = []
     for item in items:
         snippet = item.get("snippet", {})
         video_id = item.get("id", {}).get("videoId")
@@ -43,22 +44,22 @@ async def collect_youtube(query: str, days: int, limit: int, language: str, coun
         metrics = stats.get(video_id, {})
         video_url = f"https://www.youtube.com/watch?v={video_id}"
         results.append(
-            {
-                "source": "youtube",
-                "title": snippet.get("title") or "Untitled YouTube video",
-                "url": video_url,
-                "author": snippet.get("channelTitle") or "",
-                "date": snippet.get("publishedAt"),
-                "summary": snippet.get("description") or snippet.get("title") or "",
-                "full_text": "",
-                "image_url": thumbnail_url(snippet),
-                "video_url": video_url,
-                "likes": to_int(metrics.get("likeCount")),
-                "comments": to_int(metrics.get("commentCount")),
-                "shares": None,
-                "views": to_int(metrics.get("viewCount")),
-                "reason_selected": "Matched the query through the official YouTube Data API.",
-            }
+            SearchResult(
+                source="youtube",
+                title=snippet.get("title") or "Untitled YouTube video",
+                url=video_url,
+                author=snippet.get("channelTitle") or "",
+                date=snippet.get("publishedAt"),
+                summary=snippet.get("description") or snippet.get("title") or "",
+                full_text="",
+                image_url=thumbnail_url(snippet),
+                video_url=video_url,
+                likes=to_int(metrics.get("likeCount")),
+                comments=to_int(metrics.get("commentCount")),
+                shares=None,
+                views=to_int(metrics.get("viewCount")),
+                reason_selected="Matched the query through the official YouTube Data API.",
+            )
         )
     return results
 

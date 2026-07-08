@@ -5,9 +5,10 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 from collectors.common import http_client
+from models import SearchResult
 
 
-async def collect_x(query: str, days: int, limit: int, language: str, country: str) -> List[Dict[str, Any]]:
+async def collect_x(query: str, days: int, limit: int, language: str, country: str) -> List[SearchResult]:
     bearer_token = os.getenv("X_BEARER_TOKEN")
     if not bearer_token:
         return []
@@ -31,7 +32,7 @@ async def collect_x(query: str, days: int, limit: int, language: str, country: s
 
     payload = response.json()
     users = {user.get("id"): user for user in payload.get("includes", {}).get("users", [])}
-    results: List[Dict[str, Any]] = []
+    results: List[SearchResult] = []
     for item in payload.get("data", []):
         user = users.get(item.get("author_id"), {})
         username = user.get("username", "")
@@ -39,21 +40,21 @@ async def collect_x(query: str, days: int, limit: int, language: str, country: s
         metrics = item.get("public_metrics", {})
         text = item.get("text", "")
         results.append(
-            {
-                "source": "x",
-                "title": text[:120] or "X post",
-                "url": url,
-                "author": username,
-                "date": item.get("created_at"),
-                "summary": text,
-                "full_text": text,
-                "image_url": "",
-                "video_url": "",
-                "likes": metrics.get("like_count"),
-                "comments": metrics.get("reply_count"),
-                "shares": metrics.get("retweet_count"),
-                "views": metrics.get("impression_count"),
-                "reason_selected": "Matched the query through the official X API.",
-            }
+            SearchResult(
+                source="x",
+                title=text[:120] or "X post",
+                url=url,
+                author=username,
+                date=item.get("created_at"),
+                summary=text,
+                full_text=text,
+                image_url="",
+                video_url="",
+                likes=metrics.get("like_count"),
+                comments=metrics.get("reply_count"),
+                shares=metrics.get("retweet_count"),
+                views=metrics.get("impression_count"),
+                reason_selected="Matched the query through the official X API.",
+            )
         )
     return results

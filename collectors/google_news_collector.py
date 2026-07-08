@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from urllib.parse import quote_plus
 from xml.etree import ElementTree
 
 from collectors.common import empty_metrics, http_client
+from models import SearchResult
 
 
-async def collect_google_news(query: str, days: int, limit: int, language: str, country: str) -> List[Dict[str, Any]]:
+async def collect_google_news(query: str, days: int, limit: int, language: str, country: str) -> List[SearchResult]:
     lang = "en" if language == "any" else language
     region = "US" if country == "any" else country.upper()
     rss_url = (
@@ -22,24 +23,24 @@ async def collect_google_news(query: str, days: int, limit: int, language: str, 
         response.raise_for_status()
 
     root = ElementTree.fromstring(response.text)
-    results: List[Dict[str, Any]] = []
+    results: List[SearchResult] = []
     for item in root.findall("./channel/item")[:limit]:
         title = item.findtext("title") or "Untitled"
         summary = strip_markup(item.findtext("description") or title)
         results.append(
-            {
-                "source": "google_news",
-                "title": title,
-                "url": item.findtext("link") or rss_url,
-                "author": item.findtext("source") or "",
-                "date": parse_rss_date(item.findtext("pubDate")),
-                "summary": summary,
-                "full_text": "",
-                "image_url": "",
-                "video_url": "",
+            SearchResult(
+                source="google_news",
+                title=title,
+                url=item.findtext("link") or rss_url,
+                author=item.findtext("source") or "",
+                date=parse_rss_date(item.findtext("pubDate")),
+                summary=summary,
+                full_text="",
+                image_url="",
+                video_url="",
                 **empty_metrics(),
-                "reason_selected": "Matched the query in recent Google News RSS results.",
-            }
+                reason_selected="Matched the query in recent Google News RSS results.",
+            )
         )
     return results
 

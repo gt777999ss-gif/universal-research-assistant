@@ -3,7 +3,7 @@
   "info": {
     "title": "Universal Public Information Research Assistant",
     "description": "Universal public information research assistant. It searches permitted public sources, filters spam and duplicates, ranks relevant results, and returns clean JSON. It does not recommend products, suppliers, purchases, or sales strategies unless explicitly asked.",
-    "version": "1.0.0"
+    "version": "2.0.0"
   },
   "servers": [
     {
@@ -298,21 +298,25 @@
           "source": {
             "type": "string",
             "title": "Source",
+            "description": "Source that produced the result.",
             "default": ""
           },
           "title": {
             "type": "string",
             "title": "Title",
+            "description": "Result title.",
             "default": ""
           },
           "url": {
             "type": "string",
             "title": "Url",
+            "description": "Canonical result URL.",
             "default": ""
           },
           "author": {
             "type": "string",
             "title": "Author",
+            "description": "Public author, channel, source, or publisher when available.",
             "default": ""
           },
           "date": {
@@ -324,26 +328,31 @@
                 "type": "null"
               }
             ],
-            "title": "Date"
+            "title": "Date",
+            "description": "Published date or indexed date when available."
           },
           "summary": {
             "type": "string",
             "title": "Summary",
+            "description": "Short result summary.",
             "default": ""
           },
           "full_text": {
             "type": "string",
             "title": "Full Text",
+            "description": "Full public text when available from the source.",
             "default": ""
           },
           "image_url": {
             "type": "string",
             "title": "Image Url",
+            "description": "Image or thumbnail URL when available.",
             "default": ""
           },
           "video_url": {
             "type": "string",
             "title": "Video Url",
+            "description": "Video URL when available.",
             "default": ""
           },
           "likes": {
@@ -355,7 +364,8 @@
                 "type": "null"
               }
             ],
-            "title": "Likes"
+            "title": "Likes",
+            "description": "Public like/upvote count when available."
           },
           "comments": {
             "anyOf": [
@@ -366,7 +376,8 @@
                 "type": "null"
               }
             ],
-            "title": "Comments"
+            "title": "Comments",
+            "description": "Public comment/reply count when available."
           },
           "shares": {
             "anyOf": [
@@ -377,7 +388,8 @@
                 "type": "null"
               }
             ],
-            "title": "Shares"
+            "title": "Shares",
+            "description": "Public share/repost count when available."
           },
           "views": {
             "anyOf": [
@@ -388,11 +400,13 @@
                 "type": "null"
               }
             ],
-            "title": "Views"
+            "title": "Views",
+            "description": "Public view count when available."
           },
           "reason_selected": {
             "type": "string",
             "title": "Reason Selected",
+            "description": "Why the result was selected for the query.",
             "default": ""
           }
         },

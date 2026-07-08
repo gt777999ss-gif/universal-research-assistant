@@ -1,4 +1,4 @@
-# Universal AI-Powered Public Information Research Assistant
+# Universal AI-Powered Public Information Research Assistant V2
 
 FastAPI backend for public information research. It searches permitted public sources, filters ads/spam/duplicates, ranks relevant results, summarizes each result, and returns clean JSON.
 
@@ -12,6 +12,22 @@ This is not an e-commerce recommendation system. By default it does not recommen
 - Do not collect private personal data.
 - Use X/Twitter only through the official X API when `X_BEARER_TOKEN` is configured.
 - Do not login-scrape TikTok. Use manual CSV imports, licensed providers, or supported public data sources only.
+
+## V2 Source Coverage
+
+Each source has its own collector module and returns a common `SearchResult` model. If one source is unavailable or not configured, the API continues searching the remaining sources.
+
+| Source ID | Collector | Notes |
+|---|---|---|
+| `google_news` | `collectors/google_news_collector.py` | Uses public Google News RSS. |
+| `reddit` | `collectors/reddit_collector.py` | Uses public Reddit search JSON. |
+| `youtube` | `collectors/youtube_collector.py` | Uses the official YouTube Data API when `YOUTUBE_API_KEY` is configured. |
+| `x` | `collectors/x_collector.py` | Uses the official X API when `X_BEARER_TOKEN` is configured. |
+| `tiktok` | `collectors/tiktok_public_collector.py` | Placeholder for public/official/licensed TikTok data only; no login scraping. |
+| `web` | `collectors/web_search_collector.py` | Uses Bing Web Search when `BING_SEARCH_API_KEY` is configured. |
+| `manual_csv` | `collectors/manual_csv_collector.py` | Optional public-data CSV import. |
+
+Results are merged, filtered for spam/ads/irrelevance, deduplicated by URL and similar titles, then sorted by relevance and recency.
 
 ## Project Structure
 
@@ -111,10 +127,17 @@ curl -X POST http://127.0.0.1:8000/search \
 - Public endpoint.
 - Does not require `X-API-Key`.
 
+`GET /privacy`
+
+- Public HTML privacy policy endpoint.
+- Does not require `X-API-Key`.
+
 `POST /search`
 
 - Requires `X-API-Key`.
 - Searches selected public sources.
+- Supports `query`, `sources`, `days`, `language`, `country`, and `limit`.
+- Only `query` is required. Defaults are `sources: ["google_news", "web"]`, `days: 30`, `limit: 10`, `language: "any"`, and `country: "any"`.
 
 Request:
 
@@ -123,7 +146,7 @@ Request:
   "query": "natural language search request",
   "sources": ["youtube", "x", "tiktok", "reddit", "google_news", "web"],
   "days": 30,
-  "limit": 50,
+  "limit": 10,
   "language": "any",
   "country": "any"
 }
@@ -156,6 +179,8 @@ Response:
   "exports": {}
 }
 ```
+
+Core result fields include source, title, URL, summary, published date or indexed date, and image URL when available.
 
 Optional exports:
 
@@ -200,12 +225,9 @@ python3 scripts/export_openapi.py
 
 The generated schema includes:
 
-- Production placeholder server: `https://YOUR-DOMAIN.com`
-- Local development server: `http://127.0.0.1:8000`
+- Production server: `https://universal-research-assistant.onrender.com`
 - `X-API-Key` header authentication for `/search`
-- Public `/health` endpoint
-
-After deploying, replace `https://YOUR-DOMAIN.com` in `openapi.yaml` with your deployed API base URL.
+- Public `/health` and `/privacy` endpoints with `security: []`
 
 ## Deploy To Render
 
@@ -276,16 +298,14 @@ curl https://YOUR-RAILWAY-DOMAIN.up.railway.app/health
 2. Confirm the public health endpoint works:
 
 ```bash
-curl https://YOUR-DOMAIN.com/health
+curl https://universal-research-assistant.onrender.com/health
 ```
 
-3. Edit `openapi.yaml` and replace:
+3. Confirm `openapi.yaml` lists the production server:
 
 ```text
-https://YOUR-DOMAIN.com
+https://universal-research-assistant.onrender.com
 ```
-
-with your real deployed base URL.
 
 4. In ChatGPT, create or edit a Custom GPT.
 5. Open **Configure > Actions**.

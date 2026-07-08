@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import List
 
 from collectors.common import http_client
+from models import SearchResult
 
 
-async def collect_reddit(query: str, days: int, limit: int, language: str, country: str) -> List[Dict[str, Any]]:
+async def collect_reddit(query: str, days: int, limit: int, language: str, country: str) -> List[SearchResult]:
     params = {
         "q": query,
         "sort": "new",
@@ -19,7 +20,7 @@ async def collect_reddit(query: str, days: int, limit: int, language: str, count
         response = await client.get("https://www.reddit.com/search.json", params=params)
         response.raise_for_status()
 
-    results: List[Dict[str, Any]] = []
+    results: List[SearchResult] = []
     for child in response.json().get("data", {}).get("children", []):
         data = child.get("data", {})
         permalink = data.get("permalink") or ""
@@ -27,22 +28,22 @@ async def collect_reddit(query: str, days: int, limit: int, language: str, count
         created = data.get("created_utc")
         text = data.get("selftext") or ""
         results.append(
-            {
-                "source": "reddit",
-                "title": data.get("title") or "Untitled Reddit post",
-                "url": url,
-                "author": data.get("author") or "",
-                "date": datetime.fromtimestamp(created, timezone.utc).isoformat() if created else None,
-                "summary": (text[:500] if text else data.get("title") or ""),
-                "full_text": text,
-                "image_url": data.get("thumbnail") if str(data.get("thumbnail", "")).startswith("http") else "",
-                "video_url": "",
-                "likes": data.get("ups"),
-                "comments": data.get("num_comments"),
-                "shares": None,
-                "views": None,
-                "reason_selected": "Matched the query in public Reddit search results.",
-            }
+            SearchResult(
+                source="reddit",
+                title=data.get("title") or "Untitled Reddit post",
+                url=url,
+                author=data.get("author") or "",
+                date=datetime.fromtimestamp(created, timezone.utc).isoformat() if created else None,
+                summary=(text[:500] if text else data.get("title") or ""),
+                full_text=text,
+                image_url=data.get("thumbnail") if str(data.get("thumbnail", "")).startswith("http") else "",
+                video_url="",
+                likes=data.get("ups"),
+                comments=data.get("num_comments"),
+                shares=None,
+                views=None,
+                reason_selected="Matched the query in public Reddit search results.",
+            )
         )
     return results
 

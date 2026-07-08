@@ -1,6 +1,6 @@
 app:
   name: Universal Public Information Research Assistant
-  version: 1.0.0
+  version: 2.0.0
   user_agent: universal-research-assistant/1.0
 
 sources:

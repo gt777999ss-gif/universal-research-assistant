@@ -5,7 +5,7 @@ info:
     public sources, filters spam and duplicates, ranks relevant results, and returns
     clean JSON. It does not recommend products, suppliers, purchases, or sales strategies
     unless explicitly asked.
-  version: 1.0.0
+  version: 2.0.0
 servers:
 - url: https://universal-research-assistant.onrender.com
   description: Production server
@@ -221,63 +221,77 @@ components:
         source:
           type: string
           title: Source
+          description: Source that produced the result.
           default: ''
         title:
           type: string
           title: Title
+          description: Result title.
           default: ''
         url:
           type: string
           title: Url
+          description: Canonical result URL.
           default: ''
         author:
           type: string
           title: Author
+          description: Public author, channel, source, or publisher when available.
           default: ''
         date:
           anyOf:
           - type: string
           - type: 'null'
           title: Date
+          description: Published date or indexed date when available.
         summary:
           type: string
           title: Summary
+          description: Short result summary.
           default: ''
         full_text:
           type: string
           title: Full Text
+          description: Full public text when available from the source.
           default: ''
         image_url:
           type: string
           title: Image Url
+          description: Image or thumbnail URL when available.
           default: ''
         video_url:
           type: string
           title: Video Url
+          description: Video URL when available.
           default: ''
         likes:
           anyOf:
           - type: integer
           - type: 'null'
           title: Likes
+          description: Public like/upvote count when available.
         comments:
           anyOf:
           - type: integer
           - type: 'null'
           title: Comments
+          description: Public comment/reply count when available.
         shares:
           anyOf:
           - type: integer
           - type: 'null'
           title: Shares
+          description: Public share/repost count when available.
         views:
           anyOf:
           - type: integer
           - type: 'null'
           title: Views
+          description: Public view count when available.
         reason_selected:
           type: string
           title: Reason Selected
+          description: Why the result was selected for the query.
           default: ''
       type: object
       title: SearchResult

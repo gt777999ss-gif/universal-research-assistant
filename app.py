@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from collectors import COLLECTORS
 from exporters.csv_exporter import export_csv
+from models import SearchResult
 from exporters.markdown_exporter import export_markdown
 from processors.dedupe import dedupe_results
 from processors.filter import remove_ads_spam_irrelevant
@@ -52,23 +53,6 @@ class SearchRequest(BaseModel):
     @classmethod
     def normalize_query(cls, value: str) -> str:
         return " ".join(value.split())
-
-
-class SearchResult(BaseModel):
-    source: str = ""
-    title: str = ""
-    url: str = ""
-    author: str = ""
-    date: Optional[str] = None
-    summary: str = ""
-    full_text: str = ""
-    image_url: str = ""
-    video_url: str = ""
-    likes: Optional[int] = None
-    comments: Optional[int] = None
-    shares: Optional[int] = None
-    views: Optional[int] = None
-    reason_selected: str = ""
 
 
 class SearchResponse(BaseModel):
@@ -227,7 +211,7 @@ async def search(request: SearchRequest) -> SearchResponse:
     for batch in batches:
         if isinstance(batch, Exception):
             continue
-        raw_results.extend(batch)
+        raw_results.extend(result.model_dump() if hasattr(result, "model_dump") else result for result in batch)
 
     filtered = remove_ads_spam_irrelevant(raw_results, request.query)
     deduped = dedupe_results(filtered)

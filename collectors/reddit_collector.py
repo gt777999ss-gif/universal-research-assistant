@@ -23,6 +23,7 @@ async def collect_reddit(query: str, days: int, limit: int, language: str, count
     results: List[SearchResult] = []
     for child in response.json().get("data", {}).get("children", []):
         data = child.get("data", {})
+        subreddit = data.get("subreddit_name_prefixed") or (f"r/{data.get('subreddit')}" if data.get("subreddit") else "")
         permalink = data.get("permalink") or ""
         url = f"https://www.reddit.com{permalink}" if permalink.startswith("/") else data.get("url", "")
         created = data.get("created_utc")
@@ -43,6 +44,7 @@ async def collect_reddit(query: str, days: int, limit: int, language: str, count
                 shares=None,
                 views=None,
                 reason_selected="Matched the query in public Reddit search results.",
+                tags=[tag for tag in ["reddit", subreddit] if tag],
             )
         )
     return results

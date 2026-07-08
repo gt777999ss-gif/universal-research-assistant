@@ -20,6 +20,8 @@ FIELDS = [
     "shares",
     "views",
     "reason_selected",
+    "score",
+    "tags",
 ]
 
 

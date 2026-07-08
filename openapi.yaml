@@ -5,7 +5,7 @@ info:
     public sources, filters spam and duplicates, ranks relevant results, and returns
     clean JSON. It does not recommend products, suppliers, purchases, or sales strategies
     unless explicitly asked.
-  version: 2.0.0
+  version: 3.0.0
 servers:
 - url: https://universal-research-assistant.onrender.com
   description: Production server
@@ -35,6 +35,19 @@ paths:
             text/html:
               schema:
                 type: string
+      security: []
+  /sources:
+    get:
+      summary: List source availability
+      description: Public endpoint showing which sources are configured and available.
+      operationId: getSources
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourcesResponse'
       security: []
   /search:
     post:
@@ -119,14 +132,28 @@ components:
     SearchRequest:
       properties:
         query:
-          type: string
-          maxLength: 500
-          minLength: 1
+          anyOf:
+          - type: string
+            maxLength: 500
+            minLength: 1
+          - type: 'null'
           title: Query
-          description: Natural language public information search request.
+          description: Natural language public information search request. Provide
+            either query or queries.
           examples:
           - Find recent Reddit discussions and Google News articles about AI search
             tools.
+        queries:
+          items:
+            type: string
+          type: array
+          title: Queries
+          description: Batch search queries. If provided, every query is searched
+            and results are merged.
+          examples:
+          - - AI video tools
+            - AI agent tools
+            - TikTok Shop Thailand pet products
         sources:
           items:
             type: string
@@ -187,19 +214,28 @@ components:
           description: When true, also write a Markdown report under reports/.
           default: false
       type: object
-      required:
-      - query
       title: SearchRequest
     SearchResponse:
       properties:
         query:
           type: string
           title: Query
+          default: ''
+        queries:
+          items:
+            type: string
+          type: array
+          title: Queries
         sources:
           items:
             type: string
           type: array
           title: Sources
+        warnings:
+          items:
+            type: string
+          type: array
+          title: Warnings
         results:
           items:
             $ref: '#/components/schemas/SearchResult'
@@ -212,7 +248,6 @@ components:
           title: Exports
       type: object
       required:
-      - query
       - sources
       - results
       title: SearchResponse
@@ -293,8 +328,63 @@ components:
           title: Reason Selected
           description: Why the result was selected for the query.
           default: ''
+        score:
+          type: number
+          title: Score
+          description: Internal relevance and recency score used for ranking.
+          default: 0
+        tags:
+          items:
+            type: string
+          type: array
+          title: Tags
+          description: Simple tags inferred from source and query terms.
       type: object
       title: SearchResult
+    SourceStatus:
+      properties:
+        name:
+          type: string
+          enum:
+          - youtube
+          - x
+          - tiktok
+          - reddit
+          - google_news
+          - web
+          - manual_csv
+          title: Name
+        available:
+          type: boolean
+          title: Available
+        requires_api_key:
+          type: boolean
+          title: Requires Api Key
+        configured:
+          type: boolean
+          title: Configured
+        note:
+          type: string
+          title: Note
+          default: ''
+      type: object
+      required:
+      - name
+      - available
+      - requires_api_key
+      - configured
+      title: SourceStatus
+    SourcesResponse:
+      properties:
+        sources:
+          items:
+            $ref: '#/components/schemas/SourceStatus'
+          type: array
+          title: Sources
+      type: object
+      required:
+      - sources
+      title: SourcesResponse
     ValidationError:
       properties:
         loc:

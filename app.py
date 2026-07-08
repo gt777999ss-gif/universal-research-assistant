@@ -3,13 +3,13 @@ from __future__ import annotations
 import asyncio
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import yaml
 from fastapi import Depends, FastAPI, HTTPException, Request, Security, status
 from fastapi.responses import HTMLResponse
 from fastapi.security import APIKeyHeader
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from collectors import COLLECTORS
 from exporters.csv_exporter import export_csv
@@ -22,6 +22,8 @@ from processors.summarizer import summarize_results
 
 
 SourceName = Literal["youtube", "x", "tiktok", "reddit", "google_news", "web", "manual_csv"]
+DEFAULT_SOURCES: List[SourceName] = ["google_news", "web"]
+ALL_SOURCES: List[SourceName] = ["google_news", "reddit", "youtube", "x", "tiktok", "web", "manual_csv"]
 
 
 class HealthResponse(BaseModel):
@@ -30,15 +32,20 @@ class HealthResponse(BaseModel):
 
 
 class SearchRequest(BaseModel):
-    query: str = Field(
-        ...,
+    query: Optional[str] = Field(
+        default=None,
         min_length=1,
         max_length=500,
-        description="Natural language public information search request.",
+        description="Natural language public information search request. Provide either query or queries.",
         examples=["Find recent Reddit discussions and Google News articles about AI search tools."],
     )
+    queries: List[str] = Field(
+        default_factory=list,
+        description="Batch search queries. If provided, every query is searched and results are merged.",
+        examples=[["AI video tools", "AI agent tools", "TikTok Shop Thailand pet products"]],
+    )
     sources: List[SourceName] = Field(
-        default=["google_news", "web"],
+        default=DEFAULT_SOURCES,
         description="Sources to search. Defaults to Google News and general web search.",
         examples=[["google_news", "web"]],
     )
@@ -51,15 +58,40 @@ class SearchRequest(BaseModel):
 
     @field_validator("query")
     @classmethod
-    def normalize_query(cls, value: str) -> str:
-        return " ".join(value.split())
+    def normalize_query(cls, value: Optional[str]) -> Optional[str]:
+        return " ".join(value.split()) if value else value
+
+    @field_validator("queries")
+    @classmethod
+    def normalize_queries(cls, value: List[str]) -> List[str]:
+        return [" ".join(item.split()) for item in value if item and item.strip()]
+
+    @model_validator(mode="after")
+    def require_query_or_queries(self) -> "SearchRequest":
+        if not self.query and not self.queries:
+            raise ValueError("Provide either query or queries.")
+        return self
 
 
 class SearchResponse(BaseModel):
-    query: str
+    query: str = ""
+    queries: List[str] = Field(default_factory=list)
     sources: List[str]
+    warnings: List[str] = Field(default_factory=list)
     results: List[SearchResult]
     exports: Dict[str, str] = Field(default_factory=dict)
+
+
+class SourceStatus(BaseModel):
+    name: SourceName
+    available: bool
+    requires_api_key: bool
+    configured: bool
+    note: str = ""
+
+
+class SourcesResponse(BaseModel):
+    sources: List[SourceStatus]
 
 
 settings = yaml.safe_load(open("config/settings.yaml", "r", encoding="utf-8"))
@@ -139,6 +171,18 @@ async def privacy() -> HTMLResponse:
     return HTMLResponse(content=html)
 
 
+@app.get(
+    "/sources",
+    response_model=SourcesResponse,
+    operation_id="getSources",
+    summary="List source availability",
+    description="Public endpoint showing which sources are configured and available.",
+    openapi_extra={"security": []},
+)
+async def sources() -> SourcesResponse:
+    return SourcesResponse(sources=[source_status(source) for source in ALL_SOURCES])
+
+
 def verify_api_key(request: Request, api_key: Optional[str] = Security(api_key_header)) -> None:
     expected = os.getenv("RESEARCH_ASSISTANT_API_KEY")
     if not expected:
@@ -195,14 +239,18 @@ def verify_api_key(request: Request, api_key: Optional[str] = Security(api_key_h
     },
 )
 async def search(request: SearchRequest) -> SearchResponse:
-    selected_sources = request.sources or ["google_news", "web"]
-    collectors = [COLLECTORS[source] for source in selected_sources if source in COLLECTORS]
+    original_queries = request.queries or ([request.query] if request.query else [])
+    search_queries = expand_search_queries(original_queries)
+    selected_sources = request.sources or DEFAULT_SOURCES
+    collectors = [(source, COLLECTORS[source]) for source in selected_sources if source in COLLECTORS]
     per_source_limit = max(10, min(request.limit, 100))
+    warnings = source_warnings(selected_sources)
 
     batches = await asyncio.gather(
         *[
-            collector(request.query, request.days, per_source_limit, request.language, request.country)
-            for collector in collectors
+            collect_source(source, collector, query, request.days, per_source_limit, request.language, request.country)
+            for query in search_queries
+            for source, collector in collectors
         ],
         return_exceptions=True,
     )
@@ -210,12 +258,17 @@ async def search(request: SearchRequest) -> SearchResponse:
     raw_results: List[Dict[str, Any]] = []
     for batch in batches:
         if isinstance(batch, Exception):
+            warnings.append(f"A source request failed: {batch}")
             continue
-        raw_results.extend(result.model_dump() if hasattr(result, "model_dump") else result for result in batch)
+        results, batch_warnings = batch
+        warnings.extend(batch_warnings)
+        raw_results.extend(result.model_dump() if hasattr(result, "model_dump") else result for result in results)
 
-    filtered = remove_ads_spam_irrelevant(raw_results, request.query)
+    ranking_query = " ".join(search_queries)
+    filtered = remove_ads_spam_irrelevant(raw_results, ranking_query)
     deduped = dedupe_results(filtered)
-    ranked = rank_results(deduped, request.query)[: request.limit]
+    ranked = rank_results(deduped, ranking_query)[: request.limit]
+    tagged = add_result_metadata(ranked, ranking_query)
     summarized = summarize_results(ranked, settings.get("processing", {}).get("max_summary_chars", 500))
 
     exports: Dict[str, str] = {}
@@ -223,6 +276,126 @@ async def search(request: SearchRequest) -> SearchResponse:
     if request.export_csv:
         exports["csv"] = export_csv(summarized, f"reports/{timestamp}-results.csv")
     if request.export_markdown:
-        exports["markdown"] = export_markdown(request.query, summarized, f"reports/{timestamp}-results.md")
+        exports["markdown"] = export_markdown(", ".join(original_queries), summarized, f"reports/{timestamp}-results.md")
 
-    return SearchResponse(query=request.query, sources=selected_sources, results=summarized, exports=exports)
+    return SearchResponse(
+        query=request.query or "",
+        queries=request.queries,
+        sources=selected_sources,
+        warnings=unique_strings(warnings),
+        results=tagged,
+        exports=exports,
+    )
+
+
+async def collect_source(
+    source: str,
+    collector,
+    query: str,
+    days: int,
+    limit: int,
+    language: str,
+    country: str,
+) -> Tuple[List[SearchResult], List[str]]:
+    try:
+        return await collector(query, days, limit, language, country), []
+    except Exception as exc:
+        return [], [f"{source} failed for query '{query}': {exc}"]
+
+
+def source_status(source: SourceName) -> SourceStatus:
+    if source == "youtube":
+        configured = bool(os.getenv("YOUTUBE_API_KEY"))
+        return SourceStatus(name=source, available=configured, requires_api_key=True, configured=configured)
+    if source == "x":
+        configured = bool(os.getenv("X_BEARER_TOKEN"))
+        return SourceStatus(name=source, available=configured, requires_api_key=True, configured=configured)
+    if source == "web":
+        configured = bool(os.getenv("BING_SEARCH_API_KEY"))
+        return SourceStatus(
+            name=source,
+            available=configured,
+            requires_api_key=True,
+            configured=configured,
+            note="Uses Bing Web Search API when configured.",
+        )
+    if source == "tiktok":
+        return SourceStatus(
+            name=source,
+            available=False,
+            requires_api_key=False,
+            configured=False,
+            note="No legal public TikTok search provider is configured; collector returns warnings only.",
+        )
+    return SourceStatus(name=source, available=True, requires_api_key=False, configured=True)
+
+
+def source_warnings(sources_to_check: List[SourceName]) -> List[str]:
+    warnings: List[str] = []
+    for source in sources_to_check:
+        status_item = source_status(source)
+        if source == "youtube" and not status_item.configured:
+            warnings.append("YouTube source unavailable: YOUTUBE_API_KEY is not configured.")
+        elif source == "x" and not status_item.configured:
+            warnings.append("X source unavailable: X_BEARER_TOKEN is not configured.")
+        elif source == "web" and not status_item.configured:
+            warnings.append("Web source unavailable: BING_SEARCH_API_KEY is not configured.")
+        elif source == "tiktok" and not status_item.available:
+            warnings.append("TikTok source unavailable: no legal public TikTok search provider is configured.")
+    return warnings
+
+
+def expand_search_queries(queries: List[str]) -> List[str]:
+    expanded: List[str] = []
+    for query in queries:
+        expanded.append(query)
+        english_terms = chinese_to_english_terms(query)
+        if english_terms:
+            expanded.append(english_terms)
+    return unique_strings(expanded)
+
+
+def chinese_to_english_terms(query: str) -> str:
+    if not any("\u4e00" <= char <= "\u9fff" for char in query):
+        return ""
+    mapping = {
+        "人工智能": "AI",
+        "视频": "video",
+        "工具": "tools",
+        "新闻": "news",
+        "宠物": "pet",
+        "猫": "cat",
+        "狗": "dog",
+        "背包": "backpack",
+        "投诉": "complaints",
+        "评价": "reviews",
+        "趋势": "trends",
+        "泰国": "Thailand",
+        "跨境": "cross-border",
+    }
+    terms = [english for chinese, english in mapping.items() if chinese in query]
+    return " ".join(terms)
+
+
+def add_result_metadata(results: List[Dict[str, Any]], query: str) -> List[Dict[str, Any]]:
+    from processors.filter import normalize_text, relevance_score
+    from processors.ranker import parsed_timestamp
+
+    query_terms = normalize_text(query).split()
+    for result in results:
+        recency_score = min(parsed_timestamp(result.get("date")) / 2_000_000_000, 1) if result.get("date") else 0
+        result["score"] = round(relevance_score(query, result) * 10 + recency_score, 3)
+        tags = [str(result.get("source", ""))]
+        tags.extend(term for term in query_terms[:5] if term not in tags)
+        result["tags"] = tags
+    return results
+
+
+def unique_strings(values: List[str]) -> List[str]:
+    seen = set()
+    output: List[str] = []
+    for value in values:
+        if value and value not in seen:
+            seen.add(value)
+            output.append(value)
+    return output

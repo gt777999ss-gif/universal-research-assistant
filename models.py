@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -20,3 +20,5 @@ class SearchResult(BaseModel):
     shares: Optional[int] = Field(default=None, description="Public share/repost count when available.")
     views: Optional[int] = Field(default=None, description="Public view count when available.")
     reason_selected: str = Field(default="", description="Why the result was selected for the query.")
+    score: float = Field(default=0, description="Internal relevance and recency score used for ranking.")
+    tags: List[str] = Field(default_factory=list, description="Simple tags inferred from source and query terms.")

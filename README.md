@@ -1,4 +1,4 @@
-# Universal AI-Powered Public Information Research Assistant V2
+# Universal AI-Powered Public Information Research Assistant V3
 
 FastAPI backend for public information research. It searches permitted public sources, filters ads/spam/duplicates, ranks relevant results, summarizes each result, and returns clean JSON.
 
@@ -13,7 +13,17 @@ This is not an e-commerce recommendation system. By default it does not recommen
 - Use X/Twitter only through the official X API when `X_BEARER_TOKEN` is configured.
 - Do not login-scrape TikTok. Use manual CSV imports, licensed providers, or supported public data sources only.
 
-## V2 Source Coverage
+## V3 Features
+
+- Single-query and batch-query public information search.
+- Source availability reporting through `GET /sources`.
+- Per-source warnings when optional API keys are missing or a source fails.
+- Common `SearchResult` model across collectors.
+- Result `score` and `tags` fields for ranking context.
+- Optional CSV and Markdown exports.
+- Basic Chinese query support: original Chinese queries are preserved, and simple English search terms may be added internally when useful.
+
+## V3 Source Coverage
 
 Each source has its own collector module and returns a common `SearchResult` model. If one source is unavailable or not configured, the API continues searching the remaining sources.
 
@@ -27,7 +37,7 @@ Each source has its own collector module and returns a common `SearchResult` mod
 | `web` | `collectors/web_search_collector.py` | Uses Bing Web Search when `BING_SEARCH_API_KEY` is configured. |
 | `manual_csv` | `collectors/manual_csv_collector.py` | Optional public-data CSV import. |
 
-Results are merged, filtered for spam/ads/irrelevance, deduplicated by URL and similar titles, then sorted by relevance and recency.
+Results are merged, filtered for spam/ads/irrelevance, deduplicated by URL and similar titles, then sorted by relevance and recency. Missing optional API keys produce warnings instead of request failures.
 
 ## Project Structure
 
@@ -61,6 +71,24 @@ Optional source API keys:
 YOUTUBE_API_KEY=...
 X_BEARER_TOKEN=...
 BING_SEARCH_API_KEY=...
+```
+
+Enable YouTube search by creating a YouTube Data API key in Google Cloud and setting:
+
+```bash
+export YOUTUBE_API_KEY="..."
+```
+
+Enable X/Twitter search by creating an official X API bearer token and setting:
+
+```bash
+export X_BEARER_TOKEN="..."
+```
+
+Enable general web search by creating a Bing Web Search API key and setting:
+
+```bash
+export BING_SEARCH_API_KEY="..."
 ```
 
 Copy the example file locally:
@@ -104,7 +132,13 @@ python3 -m uvicorn app:app --host 127.0.0.1 --port 8000 --reload
 curl http://127.0.0.1:8000/health
 ```
 
-6. Test search with authentication:
+6. Test source status without authentication:
+
+```bash
+curl http://127.0.0.1:8000/sources
+```
+
+7. Test search with authentication:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/search \
@@ -132,14 +166,21 @@ curl -X POST http://127.0.0.1:8000/search \
 - Public HTML privacy policy endpoint.
 - Does not require `X-API-Key`.
 
+`GET /sources`
+
+- Public endpoint.
+- Does not require `X-API-Key`.
+- Returns source availability, API-key requirements, and configuration status.
+
 `POST /search`
 
 - Requires `X-API-Key`.
 - Searches selected public sources.
-- Supports `query`, `sources`, `days`, `language`, `country`, and `limit`.
-- Only `query` is required. Defaults are `sources: ["google_news", "web"]`, `days: 30`, `limit: 10`, `language: "any"`, and `country: "any"`.
+- Supports `query`, `queries`, `sources`, `days`, `language`, `country`, and `limit`.
+- Provide either `query` or `queries`.
+- Defaults are `sources: ["google_news", "web"]`, `days: 30`, `limit: 10`, `language: "any"`, and `country: "any"`.
 
-Request:
+Single-query request:
 
 ```json
 {
@@ -152,12 +193,29 @@ Request:
 }
 ```
 
+Batch request:
+
+```json
+{
+  "queries": [
+    "AI video tools",
+    "AI agent tools",
+    "TikTok Shop Thailand pet products"
+  ],
+  "sources": ["google_news", "reddit", "youtube", "web"],
+  "days": 30,
+  "limit": 20
+}
+```
+
 Response:
 
 ```json
 {
   "query": "...",
+  "queries": [],
   "sources": [],
+  "warnings": [],
   "results": [
     {
       "source": "",
@@ -173,14 +231,16 @@ Response:
       "comments": null,
       "shares": null,
       "views": null,
-      "reason_selected": ""
+      "reason_selected": "",
+      "score": 0,
+      "tags": []
     }
   ],
   "exports": {}
 }
 ```
 
-Core result fields include source, title, URL, summary, published date or indexed date, and image URL when available.
+Core result fields include source, title, URL, summary, published date or indexed date, image URL when available, score, and tags.
 
 Optional exports:
 
@@ -227,7 +287,33 @@ The generated schema includes:
 
 - Production server: `https://universal-research-assistant.onrender.com`
 - `X-API-Key` header authentication for `/search`
-- Public `/health` and `/privacy` endpoints with `security: []`
+- Public `/health`, `/privacy`, and `/sources` endpoints with `security: []`
+
+## Example ChatGPT Prompts
+
+```text
+Search YouTube and Google News for recent AI video tools.
+```
+
+```text
+Search public information about TikTok Shop Thailand pet products.
+```
+
+```text
+Search recent public discussions about pet carrier backpacks.
+```
+
+```text
+Search Google News and Reddit for customer complaints about automatic pet feeders.
+```
+
+```text
+Batch search these topics: AI video tools, AI agent tools, and TikTok Shop Thailand pet products.
+```
+
+```text
+搜索最近关于 AI 视频工具的公开信息。
+```
 
 ## Deploy To Render
 

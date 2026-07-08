@@ -84,8 +84,10 @@ app = FastAPI(
         "recommend products, suppliers, purchases, or sales strategies unless explicitly asked."
     ),
     servers=[
-        {"url": "https://YOUR-DOMAIN.com", "description": "Production server placeholder"},
-        {"url": "http://127.0.0.1:8000", "description": "Local development server"},
+        {
+            "url": "https://universal-research-assistant.onrender.com",
+            "description": "Production server",
+        },
     ],
 )
 

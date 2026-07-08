@@ -103,6 +103,7 @@ app = FastAPI(
     operation_id="getHealth",
     summary="Check service health",
     description="Public health check endpoint. Does not require an API key.",
+    openapi_extra={"security": []},
 )
 async def health() -> HealthResponse:
     return HealthResponse(status="ok", service="universal-research-assistant")

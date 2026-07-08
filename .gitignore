@@ -19,6 +19,8 @@ env/
 
 # Runtime outputs
 reports/
+data/monitors/*.json
+data/history/*.json
 data/manual_imports/*.csv
 
 # Local/editor files

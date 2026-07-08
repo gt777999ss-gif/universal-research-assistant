@@ -23,6 +23,14 @@ def analyze_trends(results: List[Dict[str, Any]], themes: List[Dict[str, Any]], 
                 "explanation": f"Recent results repeatedly mention '{term}'.",
                 "evidence": evidence,
                 "confidence": theme.get("confidence", "low"),
+                "trend_score": trend_score(theme, evidence),
             }
         )
     return trends
+
+
+def trend_score(theme: Dict[str, Any], evidence: List[str]) -> float:
+    mentions = float(theme.get("mention_count", len(evidence)))
+    importance = float(theme.get("importance_score", mentions * 10))
+    confidence_weight = {"high": 1.2, "medium": 1.0, "low": 0.8}.get(str(theme.get("confidence", "low")), 0.8)
+    return round((importance + mentions * 5 + len(evidence) * 3) * confidence_weight, 2)

@@ -44,6 +44,59 @@ def build_markdown_report(
     return "\n".join(lines) + "\n"
 
 
+def build_monitoring_report(
+    title: str,
+    executive_summary: str,
+    top_stories: List[Dict[str, Any]],
+    trends: List[Dict[str, Any]],
+    risks: List[Dict[str, Any]],
+    opportunities: List[Dict[str, Any]],
+    topics: List[Dict[str, Any]],
+    followups: List[str],
+    sources: List[str],
+) -> str:
+    lines = [f"# {title}", "", "## Executive Summary", "", executive_summary, ""]
+    lines.extend(["## Top Stories", "", "| Source | Title | Date | URL |", "|---|---|---|---|"])
+    for item in top_stories[:10]:
+        lines.append(f"| {item.get('source', '')} | {escape(item.get('title', ''))} | {item.get('date') or ''} | {item.get('url', '')} |")
+    lines.extend([""])
+    lines.extend(section("Emerging Trends", trends, "trend", "explanation"))
+    lines.extend(section("Risks", risks, "risk", "explanation"))
+    lines.extend(section("Opportunities", opportunities, "opportunity", "explanation"))
+    lines.extend(["## Most Discussed Topics", ""])
+    for item in topics[:10]:
+        lines.append(f"- **{item.get('title') or item.get('topic', '')}**: score {item.get('importance_score') or item.get('trend_score') or 0}")
+    lines.extend(["", "## Recommended Follow-up Queries", ""])
+    lines.extend(f"- {query}" for query in followups)
+    lines.extend(["", "## Sources Used", ""])
+    lines.extend(f"- {source}" for source in sources)
+    return "\n".join(lines) + "\n"
+
+
+def build_weekly_report(
+    title: str,
+    week_summary: str,
+    trend_changes: List[Dict[str, Any]],
+    new_topics: List[str],
+    losing_topics: List[str],
+    risk_changes: List[str],
+    opportunity_changes: List[str],
+) -> str:
+    lines = [f"# {title}", "", "## Week Summary", "", week_summary, ""]
+    lines.extend(["## Trend Changes", ""])
+    for item in trend_changes:
+        lines.append(f"- **{item.get('topic', '')}**: {item.get('status', '')} ({item.get('change', 0)})")
+    lines.extend(["", "## New Topics", ""])
+    lines.extend(f"- {topic}" for topic in new_topics)
+    lines.extend(["", "## Topics Losing Attention", ""])
+    lines.extend(f"- {topic}" for topic in losing_topics)
+    lines.extend(["", "## Risk Changes", ""])
+    lines.extend(f"- {item}" for item in risk_changes)
+    lines.extend(["", "## Opportunity Changes", ""])
+    lines.extend(f"- {item}" for item in opportunity_changes)
+    return "\n".join(lines) + "\n"
+
+
 def save_markdown_report(markdown: str, prefix: str = "research-report") -> str:
     today = datetime.utcnow().strftime("%Y-%m-%d")
     directory = Path("reports") / today

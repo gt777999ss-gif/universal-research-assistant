@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import yaml
@@ -12,22 +12,43 @@ from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from analyzers.opportunity_analyzer import analyze_opportunities
-from analyzers.report_builder import build_executive_summary, build_markdown_report, save_markdown_report
+from analyzers.report_builder import (
+    build_executive_summary,
+    build_markdown_report,
+    build_monitoring_report,
+    build_weekly_report,
+    save_markdown_report,
+)
 from analyzers.risk_analyzer import analyze_risks
-from analyzers.theme_extractor import extract_themes, source_breakdown
+from analyzers.theme_extractor import cluster_similar_stories, extract_themes, source_breakdown
 from analyzers.trend_analyzer import analyze_trends
 from collectors import COLLECTORS
 from exporters.csv_exporter import export_csv
 from models import SearchResult
+from monitoring.store import (
+    create_monitor,
+    delete_monitor,
+    get_monitor,
+    list_monitors,
+    load_report_json,
+    recent_reports,
+    save_history,
+    save_report_files,
+    update_monitor_after_run,
+)
+from notifications.notifier import send_test_notification
 from exporters.markdown_exporter import export_markdown
 from processors.dedupe import dedupe_results
 from processors.filter import remove_ads_spam_irrelevant
 from processors.ranker import rank_results
 from processors.summarizer import summarize_results
+from scheduler.scheduler import MonitorScheduler
 
 
 SourceName = Literal["youtube", "x", "tiktok", "reddit", "google_news", "web", "manual_csv"]
 AnalysisType = Literal["general", "trend", "market", "competitor", "customer_feedback", "risk", "opportunity"]
+MonitorFrequency = Literal["hourly", "daily", "weekly"]
+NotificationChannel = Literal["email", "telegram", "discord", "webhook"]
 DEFAULT_SOURCES: List[SourceName] = ["google_news", "web"]
 ALL_SOURCES: List[SourceName] = ["google_news", "reddit", "youtube", "x", "tiktok", "web", "manual_csv"]
 
@@ -196,8 +217,96 @@ class SourcesResponse(BaseModel):
     sources: List[SourceStatus]
 
 
+class MonitorConfig(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120, examples=["AI Video"])
+    query: str = Field(..., min_length=1, max_length=500, examples=["AI video tools"])
+    sources: List[SourceName] = Field(default=DEFAULT_SOURCES, examples=[["google_news", "reddit", "youtube", "web"]])
+    analysis_type: AnalysisType = "trend"
+    frequency: MonitorFrequency = "daily"
+    days: int = Field(default=30, ge=1, le=365)
+    limit: int = Field(default=50, ge=1, le=100)
+    language: str = Field(default="auto", min_length=2, max_length=20)
+    country: str = Field(default="any", min_length=2, max_length=20)
+    enabled: bool = True
+    export_csv: bool = False
+
+
+class Monitor(MonitorConfig):
+    id: str
+    created_at: str = ""
+    updated_at: str = ""
+    last_run: Optional[str] = None
+    next_run: Optional[str] = None
+    last_status: str = "never_run"
+    last_warning_count: int = 0
+
+
+class MonitorListResponse(BaseModel):
+    monitors: List[Monitor]
+
+
+class MonitorRunRequest(BaseModel):
+    id: Optional[str] = Field(default=None, description="Optional monitor ID. If omitted, all enabled due monitors are run.")
+    force: bool = Field(default=True, description="When true, run selected monitor even if it is not due.")
+
+
+class MonitorRunResponse(BaseModel):
+    ran: int
+    results: List[Dict[str, Any]] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+
+
+class MonitoringReportResponse(BaseModel):
+    report_type: str
+    query: str = ""
+    markdown_report: str
+    json_report: Dict[str, Any]
+    export_paths: Dict[str, str] = Field(default_factory=dict)
+    warnings: List[str] = Field(default_factory=list)
+
+
+class CompareReportsRequest(BaseModel):
+    report_a: str = Field(..., examples=["2026-07-01"])
+    report_b: str = Field(..., examples=["2026-07-08"])
+
+
+class CompareReportsResponse(BaseModel):
+    report_a: str
+    report_b: str
+    new_topics: List[str] = Field(default_factory=list)
+    removed_topics: List[str] = Field(default_factory=list)
+    growing_trends: List[str] = Field(default_factory=list)
+    declining_trends: List[str] = Field(default_factory=list)
+    risk_differences: List[str] = Field(default_factory=list)
+    opportunity_differences: List[str] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+
+
+class NotifyTestRequest(BaseModel):
+    channel: NotificationChannel
+    target: str = ""
+    message: str = "Universal Research Assistant notification test."
+
+
+class NotifyTestResponse(BaseModel):
+    channel: str
+    sent: bool
+    status: str
+    detail: str
+    target: str = ""
+
+
+class DashboardResponse(BaseModel):
+    running_monitors: List[Monitor]
+    last_run: Optional[str] = None
+    next_run: Optional[str] = None
+    recent_reports: List[Dict[str, Any]] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+
+
 settings = yaml.safe_load(open("config/settings.yaml", "r", encoding="utf-8"))
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+scheduler_instance: Optional[MonitorScheduler] = None
 
 app = FastAPI(
     title=settings["app"]["name"],
@@ -214,6 +323,19 @@ app = FastAPI(
         },
     ],
 )
+
+
+@app.on_event("startup")
+async def start_monitor_scheduler() -> None:
+    global scheduler_instance
+    scheduler_instance = MonitorScheduler(run_monitor_job)
+    asyncio.create_task(scheduler_instance.loop_forever())
+
+
+@app.on_event("shutdown")
+async def stop_monitor_scheduler() -> None:
+    if scheduler_instance:
+        scheduler_instance.stop()
 
 
 @app.get(
@@ -273,6 +395,18 @@ async def privacy() -> HTMLResponse:
     return HTMLResponse(content=html)
 
 
+def verify_api_key(request: Request, api_key: Optional[str] = Security(api_key_header)) -> None:
+    expected = os.getenv("RESEARCH_ASSISTANT_API_KEY")
+    if not expected:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="RESEARCH_ASSISTANT_API_KEY is not configured.",
+        )
+    api_key = api_key or request.headers.get("X-Api-Key") or request.headers.get("x-api-key")
+    if api_key != expected:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or missing API key.")
+
+
 @app.get(
     "/sources",
     response_model=SourcesResponse,
@@ -285,16 +419,106 @@ async def sources() -> SourcesResponse:
     return SourcesResponse(sources=[source_status(source) for source in ALL_SOURCES])
 
 
-def verify_api_key(request: Request, api_key: Optional[str] = Security(api_key_header)) -> None:
-    expected = os.getenv("RESEARCH_ASSISTANT_API_KEY")
-    if not expected:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="RESEARCH_ASSISTANT_API_KEY is not configured.",
-        )
-    api_key = api_key or request.headers.get("X-Api-Key") or request.headers.get("x-api-key")
-    if api_key != expected:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or missing API key.")
+@app.post(
+    "/monitor/create",
+    response_model=Monitor,
+    operation_id="createMonitor",
+    summary="Create a public information monitor",
+    description="Creates a saved monitor definition under data/monitors/. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def monitor_create(config: MonitorConfig) -> Monitor:
+    return Monitor(**create_monitor(config.model_dump()))
+
+
+@app.get(
+    "/monitor",
+    response_model=MonitorListResponse,
+    operation_id="listMonitors",
+    summary="List monitors",
+    description="Lists saved monitor definitions. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def monitor_list() -> MonitorListResponse:
+    return MonitorListResponse(monitors=[Monitor(**item) for item in list_monitors()])
+
+
+@app.get(
+    "/monitor/{id}",
+    response_model=Monitor,
+    operation_id="getMonitor",
+    summary="Get a monitor",
+    description="Returns one saved monitor definition. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def monitor_get(id: str) -> Monitor:
+    monitor = get_monitor(id)
+    if not monitor:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Monitor not found.")
+    return Monitor(**monitor)
+
+
+@app.delete(
+    "/monitor/{id}",
+    response_model=Dict[str, bool],
+    operation_id="deleteMonitor",
+    summary="Delete a monitor",
+    description="Deletes one saved monitor definition. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def monitor_delete(id: str) -> Dict[str, bool]:
+    deleted = delete_monitor(id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Monitor not found.")
+    return {"deleted": True}
+
+
+@app.post(
+    "/monitor/run",
+    response_model=MonitorRunResponse,
+    operation_id="runMonitors",
+    summary="Run monitors manually",
+    description="Runs one monitor by ID or all due enabled monitors. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def monitor_run(request: MonitorRunRequest = MonitorRunRequest()) -> MonitorRunResponse:
+    warnings: List[str] = []
+    if request.id:
+        monitor = get_monitor(request.id)
+        if not monitor:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Monitor not found.")
+        outputs = [await run_monitor_job(monitor)]
+    elif request.force:
+        outputs = [await run_monitor_job(monitor) for monitor in list_monitors() if monitor.get("enabled", True)]
+    else:
+        outputs = await scheduler_instance.run_due_once() if scheduler_instance else []
+    if scheduler_instance:
+        warnings.extend(scheduler_instance.last_warnings)
+    return MonitorRunResponse(ran=len(outputs), results=outputs, warnings=unique_strings(warnings))
+
+
+@app.get(
+    "/dashboard",
+    response_model=DashboardResponse,
+    operation_id="getMonitoringDashboard",
+    summary="Get monitoring dashboard data",
+    description="Returns monitor status, recent reports, and warnings. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def dashboard() -> DashboardResponse:
+    monitors = [Monitor(**item) for item in list_monitors()]
+    last_run = max((item.last_run for item in monitors if item.last_run), default=None)
+    next_run = min((item.next_run for item in monitors if item.next_run), default=None)
+    warnings = source_warnings(unique_source_names([source for monitor in monitors for source in monitor.sources]))
+    if scheduler_instance:
+        warnings.extend(scheduler_instance.last_warnings[-10:])
+    return DashboardResponse(
+        running_monitors=[monitor for monitor in monitors if monitor.enabled],
+        last_run=last_run,
+        next_run=next_run,
+        recent_reports=recent_reports(),
+        warnings=unique_strings(warnings),
+    )
 
 
 @app.post(
@@ -397,6 +621,62 @@ async def report(request: AnalysisRequest) -> ReportResponse:
 
 
 @app.post(
+    "/report/daily",
+    response_model=MonitoringReportResponse,
+    operation_id="generateDailyReport",
+    summary="Generate a daily monitoring report",
+    description="Generates a daily public information monitoring report and stores JSON and Markdown files. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def daily_report(request: AnalysisRequest) -> MonitoringReportResponse:
+    return await build_period_report(request, "daily")
+
+
+@app.post(
+    "/report/weekly",
+    response_model=MonitoringReportResponse,
+    operation_id="generateWeeklyReport",
+    summary="Generate a weekly monitoring report",
+    description="Generates a weekly public information monitoring report and stores JSON and Markdown files. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def weekly_report(request: AnalysisRequest) -> MonitoringReportResponse:
+    return await build_period_report(request, "weekly")
+
+
+@app.post(
+    "/report/compare",
+    response_model=CompareReportsResponse,
+    operation_id="compareReports",
+    summary="Compare two report dates",
+    description="Compares stored JSON reports by date and returns topic, risk, and opportunity differences. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def compare_reports(request: CompareReportsRequest) -> CompareReportsResponse:
+    report_a = load_report_json(request.report_a)
+    report_b = load_report_json(request.report_b)
+    warnings: List[str] = []
+    if not report_a:
+        warnings.append(f"No JSON report found for {request.report_a}.")
+    if not report_b:
+        warnings.append(f"No JSON report found for {request.report_b}.")
+    comparison = compare_report_payloads(report_a or {}, report_b or {})
+    return CompareReportsResponse(report_a=request.report_a, report_b=request.report_b, warnings=warnings, **comparison)
+
+
+@app.post(
+    "/notify/test",
+    response_model=NotifyTestResponse,
+    operation_id="testNotification",
+    summary="Test notification framework",
+    description="Returns placeholder status for email, Telegram, Discord, or webhook notification channels. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def notify_test(request: NotifyTestRequest) -> NotifyTestResponse:
+    return NotifyTestResponse(**await send_test_notification(request.channel, request.target, request.message))
+
+
+@app.post(
     "/batch",
     response_model=BatchResponse,
     operation_id="batchResearchTasks",
@@ -431,6 +711,161 @@ async def batch(request: BatchRequest) -> BatchResponse:
         )
         report_sections.extend([f"## {task.query}", "", analysis.executive_summary, "", analysis.markdown_report, ""])
     return BatchResponse(tasks=task_outputs, combined_markdown_report="\n".join(report_sections))
+
+
+async def run_monitor_job(monitor: Dict[str, Any]) -> Dict[str, Any]:
+    analysis_request = AnalysisRequest(
+        query=monitor["query"],
+        sources=monitor.get("sources") or DEFAULT_SOURCES,
+        days=monitor.get("days", 30),
+        limit=monitor.get("limit", 50),
+        language=monitor.get("language", "auto"),
+        country=monitor.get("country", "any"),
+        analysis_type=monitor.get("analysis_type", "trend"),
+        export_csv=bool(monitor.get("export_csv", False)),
+        export_markdown=True,
+    )
+    report_response = await build_period_report(analysis_request, "daily", monitor_name=monitor.get("name", "monitor"))
+    csv_path = ""
+    if monitor.get("export_csv"):
+        csv_path = export_csv(report_response.json_report.get("top_results", []), f"reports/{datetime.utcnow().strftime('%Y-%m-%d')}/{monitor['id']}-results.csv")
+        report_response.export_paths["csv"] = csv_path
+
+    history = {
+        "monitor_id": monitor["id"],
+        "monitor_name": monitor.get("name", ""),
+        "ran_at": datetime.utcnow().isoformat() + "Z",
+        "report": report_response.json_report,
+        "export_paths": report_response.export_paths,
+        "warnings": report_response.warnings,
+    }
+    history_path = save_history(monitor["id"], history)
+    updated = update_monitor_after_run(monitor, "ok", len(report_response.warnings))
+    return {
+        "monitor_id": monitor["id"],
+        "name": monitor.get("name", ""),
+        "status": "ok",
+        "history_path": history_path,
+        "export_paths": report_response.export_paths,
+        "next_run": updated.get("next_run"),
+        "warnings": report_response.warnings,
+    }
+
+
+async def build_period_report(
+    request: AnalysisRequest,
+    report_type: str,
+    monitor_name: str = "",
+) -> MonitoringReportResponse:
+    pipeline = await run_search_pipeline(request)
+    query_label = query_label_from_request(request)
+    themes = extract_themes(pipeline["results"], limit=12)
+    trends = analyze_trends(pipeline["results"], themes, limit=8)
+    risks = analyze_risks(pipeline["results"], limit=8)
+    opportunities = analyze_opportunities(pipeline["results"], themes, limit=8)
+    story_clusters = cluster_similar_stories(pipeline["results"], limit=10)
+    followups = recommended_followups(query_label, themes, request.analysis_type, resolve_output_language(request, pipeline["original_queries"]))
+    executive_summary = build_executive_summary(query_label, pipeline["results"], themes, resolve_output_language(request, pipeline["original_queries"]))
+    sources = sorted(set(str(result.get("source", "")) for result in pipeline["results"] if result.get("source")))
+
+    json_report: Dict[str, Any] = {
+        "report_type": report_type,
+        "query": query_label,
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "executive_summary": executive_summary,
+        "top_stories": pipeline["results"][:10],
+        "emerging_trends": trends,
+        "risks": risks,
+        "opportunities": opportunities,
+        "most_discussed_topics": themes,
+        "story_clusters": story_clusters,
+        "recommended_follow_up_queries": followups,
+        "sources_used": sources,
+        "warnings": pipeline["warnings"],
+    }
+
+    if report_type == "weekly":
+        previous = latest_report_before_today()
+        comparison = compare_report_payloads(previous or {}, json_report)
+        markdown = build_weekly_report(
+            title=f"Weekly Monitoring Report: {monitor_name or query_label}",
+            week_summary=executive_summary,
+            trend_changes=[{"topic": topic, "status": "growing", "change": 1} for topic in comparison["growing_trends"]],
+            new_topics=comparison["new_topics"],
+            losing_topics=comparison["declining_trends"],
+            risk_changes=comparison["risk_differences"],
+            opportunity_changes=comparison["opportunity_differences"],
+        )
+    else:
+        markdown = build_monitoring_report(
+            title=f"Daily Monitoring Report: {monitor_name or query_label}",
+            executive_summary=executive_summary,
+            top_stories=pipeline["results"],
+            trends=trends,
+            risks=risks,
+            opportunities=opportunities,
+            topics=themes,
+            followups=followups,
+            sources=sources,
+        )
+
+    export_paths = save_report_files(f"{report_type}-{monitor_name or query_label}", json_report, markdown)
+    return MonitoringReportResponse(
+        report_type=report_type,
+        query=query_label,
+        markdown_report=markdown,
+        json_report=json_report,
+        export_paths=export_paths,
+        warnings=pipeline["warnings"],
+    )
+
+
+def compare_report_payloads(report_a: Dict[str, Any], report_b: Dict[str, Any]) -> Dict[str, List[str]]:
+    topics_a = topic_scores(report_a)
+    topics_b = topic_scores(report_b)
+    risks_a = named_items(report_a.get("risks", []), "risk")
+    risks_b = named_items(report_b.get("risks", []), "risk")
+    opportunities_a = named_items(report_a.get("opportunities", []), "opportunity")
+    opportunities_b = named_items(report_b.get("opportunities", []), "opportunity")
+
+    new_topics = sorted(set(topics_b) - set(topics_a))
+    removed_topics = sorted(set(topics_a) - set(topics_b))
+    growing = sorted([topic for topic in set(topics_a) & set(topics_b) if topics_b[topic] > topics_a[topic]], key=lambda item: topics_b[item], reverse=True)
+    declining = sorted([topic for topic in set(topics_a) & set(topics_b) if topics_b[topic] < topics_a[topic]], key=lambda item: topics_a[item] - topics_b[item], reverse=True)
+    return {
+        "new_topics": new_topics[:20],
+        "removed_topics": removed_topics[:20],
+        "growing_trends": growing[:20],
+        "declining_trends": declining[:20],
+        "risk_differences": sorted(set(risks_b) ^ set(risks_a))[:20],
+        "opportunity_differences": sorted(set(opportunities_b) ^ set(opportunities_a))[:20],
+    }
+
+
+def topic_scores(report: Dict[str, Any]) -> Dict[str, float]:
+    scores: Dict[str, float] = {}
+    for item in report.get("most_discussed_topics", []):
+        topic = str(item.get("title", ""))
+        if topic:
+            scores[topic] = float(item.get("importance_score") or item.get("mention_count") or 1)
+    for item in report.get("emerging_trends", []):
+        topic = str(item.get("trend", ""))
+        if topic:
+            scores[topic] = max(scores.get(topic, 0.0), float(item.get("trend_score") or 1))
+    return scores
+
+
+def named_items(items: List[Dict[str, Any]], key: str) -> List[str]:
+    return [str(item.get(key, "")) for item in items if item.get(key)]
+
+
+def latest_report_before_today() -> Optional[Dict[str, Any]]:
+    today = datetime.utcnow().date()
+    for offset in range(1, 15):
+        payload = load_report_json((today - timedelta(days=offset)).isoformat())
+        if payload:
+            return payload
+    return None
 
 
 async def collect_source(
@@ -664,4 +1099,12 @@ def unique_strings(values: List[str]) -> List[str]:
         if value and value not in seen:
             seen.add(value)
             output.append(value)
+    return output
+
+
+def unique_source_names(values: List[str]) -> List[SourceName]:
+    output: List[SourceName] = []
+    for value in values:
+        if value in ALL_SOURCES and value not in output:
+            output.append(value)  # type: ignore[arg-type]
     return output

@@ -3,7 +3,7 @@
   "info": {
     "title": "Universal Public Information Research Assistant",
     "description": "Universal public information research assistant. It searches permitted public sources, filters spam and duplicates, ranks relevant results, and returns clean JSON. It does not recommend products, suppliers, purchases, or sales strategies unless explicitly asked.",
-    "version": "4.0.0"
+    "version": "5.0.0"
   },
   "servers": [
     {
@@ -70,6 +70,236 @@
           }
         },
         "security": []
+      }
+    },
+    "/monitor/create": {
+      "post": {
+        "summary": "Create a public information monitor",
+        "description": "Creates a saved monitor definition under data/monitors/. Requires the X-API-Key header.",
+        "operationId": "createMonitor",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonitorConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Monitor"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/monitor": {
+      "get": {
+        "summary": "List monitors",
+        "description": "Lists saved monitor definitions. Requires the X-API-Key header.",
+        "operationId": "listMonitors",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitorListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/monitor/{id}": {
+      "get": {
+        "summary": "Get a monitor",
+        "description": "Returns one saved monitor definition. Requires the X-API-Key header.",
+        "operationId": "getMonitor",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Monitor"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a monitor",
+        "description": "Deletes one saved monitor definition. Requires the X-API-Key header.",
+        "operationId": "deleteMonitor",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Deletemonitor"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/monitor/run": {
+      "post": {
+        "summary": "Run monitors manually",
+        "description": "Runs one monitor by ID or all due enabled monitors. Requires the X-API-Key header.",
+        "operationId": "runMonitors",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonitorRunRequest",
+                "default": {
+                  "force": true
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitorRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/dashboard": {
+      "get": {
+        "summary": "Get monitoring dashboard data",
+        "description": "Returns monitor status, recent reports, and warnings. Requires the X-API-Key header.",
+        "operationId": "getMonitoringDashboard",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
       }
     },
     "/search": {
@@ -211,6 +441,182 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ReportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/report/daily": {
+      "post": {
+        "summary": "Generate a daily monitoring report",
+        "description": "Generates a daily public information monitoring report and stores JSON and Markdown files. Requires the X-API-Key header.",
+        "operationId": "generateDailyReport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitoringReportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/report/weekly": {
+      "post": {
+        "summary": "Generate a weekly monitoring report",
+        "description": "Generates a weekly public information monitoring report and stores JSON and Markdown files. Requires the X-API-Key header.",
+        "operationId": "generateWeeklyReport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitoringReportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/report/compare": {
+      "post": {
+        "summary": "Compare two report dates",
+        "description": "Compares stored JSON reports by date and returns topic, risk, and opportunity differences. Requires the X-API-Key header.",
+        "operationId": "compareReports",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareReportsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompareReportsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/notify/test": {
+      "post": {
+        "summary": "Test notification framework",
+        "description": "Returns placeholder status for email, Telegram, Discord, or webhook notification channels. Requires the X-API-Key header.",
+        "operationId": "testNotification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotifyTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotifyTestResponse"
                 }
               }
             }
@@ -676,6 +1082,150 @@
         ],
         "title": "BatchTaskResponse"
       },
+      "CompareReportsRequest": {
+        "properties": {
+          "report_a": {
+            "type": "string",
+            "title": "Report A",
+            "examples": [
+              "2026-07-01"
+            ]
+          },
+          "report_b": {
+            "type": "string",
+            "title": "Report B",
+            "examples": [
+              "2026-07-08"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "report_a",
+          "report_b"
+        ],
+        "title": "CompareReportsRequest"
+      },
+      "CompareReportsResponse": {
+        "properties": {
+          "report_a": {
+            "type": "string",
+            "title": "Report A"
+          },
+          "report_b": {
+            "type": "string",
+            "title": "Report B"
+          },
+          "new_topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "New Topics"
+          },
+          "removed_topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Removed Topics"
+          },
+          "growing_trends": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Growing Trends"
+          },
+          "declining_trends": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Declining Trends"
+          },
+          "risk_differences": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Risk Differences"
+          },
+          "opportunity_differences": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Opportunity Differences"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "report_a",
+          "report_b"
+        ],
+        "title": "CompareReportsResponse"
+      },
+      "DashboardResponse": {
+        "properties": {
+          "running_monitors": {
+            "items": {
+              "$ref": "#/components/schemas/Monitor"
+            },
+            "type": "array",
+            "title": "Running Monitors"
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run"
+          },
+          "next_run": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run"
+          },
+          "recent_reports": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Recent Reports"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "running_monitors"
+        ],
+        "title": "DashboardResponse"
+      },
       "Finding": {
         "properties": {
           "title": {
@@ -744,6 +1294,462 @@
           "service"
         ],
         "title": "HealthResponse"
+      },
+      "Monitor": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "examples": [
+              "AI Video"
+            ]
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Query",
+            "examples": [
+              "AI video tools"
+            ]
+          },
+          "sources": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "youtube",
+                "x",
+                "tiktok",
+                "reddit",
+                "google_news",
+                "web",
+                "manual_csv"
+              ]
+            },
+            "type": "array",
+            "title": "Sources",
+            "default": [
+              "google_news",
+              "web"
+            ],
+            "examples": [
+              [
+                "google_news",
+                "reddit",
+                "youtube",
+                "web"
+              ]
+            ]
+          },
+          "analysis_type": {
+            "type": "string",
+            "enum": [
+              "general",
+              "trend",
+              "market",
+              "competitor",
+              "customer_feedback",
+              "risk",
+              "opportunity"
+            ],
+            "title": "Analysis Type",
+            "default": "trend"
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "hourly",
+              "daily",
+              "weekly"
+            ],
+            "title": "Frequency",
+            "default": "daily"
+          },
+          "days": {
+            "type": "integer",
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Days",
+            "default": 30
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 50
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 2,
+            "title": "Language",
+            "default": "auto"
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 2,
+            "title": "Country",
+            "default": "any"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "export_csv": {
+            "type": "boolean",
+            "title": "Export Csv",
+            "default": false
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "default": ""
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At",
+            "default": ""
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run"
+          },
+          "next_run": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run"
+          },
+          "last_status": {
+            "type": "string",
+            "title": "Last Status",
+            "default": "never_run"
+          },
+          "last_warning_count": {
+            "type": "integer",
+            "title": "Last Warning Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "query",
+          "id"
+        ],
+        "title": "Monitor"
+      },
+      "MonitorConfig": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "examples": [
+              "AI Video"
+            ]
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Query",
+            "examples": [
+              "AI video tools"
+            ]
+          },
+          "sources": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "youtube",
+                "x",
+                "tiktok",
+                "reddit",
+                "google_news",
+                "web",
+                "manual_csv"
+              ]
+            },
+            "type": "array",
+            "title": "Sources",
+            "default": [
+              "google_news",
+              "web"
+            ],
+            "examples": [
+              [
+                "google_news",
+                "reddit",
+                "youtube",
+                "web"
+              ]
+            ]
+          },
+          "analysis_type": {
+            "type": "string",
+            "enum": [
+              "general",
+              "trend",
+              "market",
+              "competitor",
+              "customer_feedback",
+              "risk",
+              "opportunity"
+            ],
+            "title": "Analysis Type",
+            "default": "trend"
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "hourly",
+              "daily",
+              "weekly"
+            ],
+            "title": "Frequency",
+            "default": "daily"
+          },
+          "days": {
+            "type": "integer",
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Days",
+            "default": 30
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 50
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 2,
+            "title": "Language",
+            "default": "auto"
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 2,
+            "title": "Country",
+            "default": "any"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "export_csv": {
+            "type": "boolean",
+            "title": "Export Csv",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "query"
+        ],
+        "title": "MonitorConfig"
+      },
+      "MonitorListResponse": {
+        "properties": {
+          "monitors": {
+            "items": {
+              "$ref": "#/components/schemas/Monitor"
+            },
+            "type": "array",
+            "title": "Monitors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "monitors"
+        ],
+        "title": "MonitorListResponse"
+      },
+      "MonitorRunRequest": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id",
+            "description": "Optional monitor ID. If omitted, all enabled due monitors are run."
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "description": "When true, run selected monitor even if it is not due.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "MonitorRunRequest"
+      },
+      "MonitorRunResponse": {
+        "properties": {
+          "ran": {
+            "type": "integer",
+            "title": "Ran"
+          },
+          "results": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ran"
+        ],
+        "title": "MonitorRunResponse"
+      },
+      "MonitoringReportResponse": {
+        "properties": {
+          "report_type": {
+            "type": "string",
+            "title": "Report Type"
+          },
+          "query": {
+            "type": "string",
+            "title": "Query",
+            "default": ""
+          },
+          "markdown_report": {
+            "type": "string",
+            "title": "Markdown Report"
+          },
+          "json_report": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json Report"
+          },
+          "export_paths": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Export Paths"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "report_type",
+          "markdown_report",
+          "json_report"
+        ],
+        "title": "MonitoringReportResponse"
+      },
+      "NotifyTestRequest": {
+        "properties": {
+          "channel": {
+            "type": "string",
+            "enum": [
+              "email",
+              "telegram",
+              "discord",
+              "webhook"
+            ],
+            "title": "Channel"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target",
+            "default": ""
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Universal Research Assistant notification test."
+          }
+        },
+        "type": "object",
+        "required": [
+          "channel"
+        ],
+        "title": "NotifyTestRequest"
+      },
+      "NotifyTestResponse": {
+        "properties": {
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "sent": {
+            "type": "boolean",
+            "title": "Sent"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "channel",
+          "sent",
+          "status",
+          "detail"
+        ],
+        "title": "NotifyTestResponse"
       },
       "OpportunityItem": {
         "properties": {

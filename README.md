@@ -1,6 +1,6 @@
-# Universal AI-Powered Public Information Research Assistant V4 Professional
+# Universal AI-Powered Public Information Research Assistant V5 Enterprise Monitoring
 
-FastAPI backend for public information research and deterministic analysis. It searches permitted public sources, filters ads/spam/duplicates, ranks relevant results, summarizes each result, groups repeated themes, identifies trends/risks/opportunities, and returns clean JSON or Markdown reports.
+FastAPI backend for public information research, deterministic analysis, and monitoring. It searches permitted public sources, filters ads/spam/duplicates, ranks relevant results, summarizes each result, groups repeated themes, identifies trends/risks/opportunities, creates daily and weekly reports, and can continuously monitor public information sources.
 
 This is not an e-commerce recommendation system. By default it does not recommend products, suppliers, purchases, or selling strategies.
 
@@ -13,7 +13,7 @@ This is not an e-commerce recommendation system. By default it does not recommen
 - Use X/Twitter only through the official X API when `X_BEARER_TOKEN` is configured.
 - Do not login-scrape TikTok. Use manual CSV imports, licensed providers, or supported public data sources only.
 
-## V4 Professional Features
+## V5 Enterprise Monitoring Features
 
 - Single-query and batch-query public information search.
 - Source availability reporting through `GET /sources`.
@@ -26,8 +26,17 @@ This is not an e-commerce recommendation system. By default it does not recommen
 - Markdown research report generation through `POST /report`.
 - Multi-task analysis through `POST /batch`.
 - Analyzer modules for themes, trends, risks, opportunities, and report building.
+- Saved monitors through `POST /monitor/create`, `GET /monitor`, `GET /monitor/{id}`, and `DELETE /monitor/{id}`.
+- Manual monitor execution through `POST /monitor/run`.
+- Built-in background scheduler for hourly, daily, and weekly monitors.
+- Daily monitoring reports through `POST /report/daily`.
+- Weekly monitoring reports through `POST /report/weekly`.
+- Stored report comparison through `POST /report/compare`.
+- Monitoring dashboard API through `GET /dashboard`.
+- Notification framework placeholders for email, Telegram, Discord, and webhook through `POST /notify/test`.
+- Report history under `reports/YYYY-MM-DD/`.
 
-## V4 Source Coverage
+## V5 Source Coverage
 
 Each source has its own collector module and returns a common `SearchResult` model. If one source is unavailable or not configured, the API continues searching the remaining sources.
 
@@ -45,7 +54,7 @@ Results are merged, filtered for spam/ads/irrelevance, deduplicated by URL and s
 
 ## Analyzer Modules
 
-V4 analysis is deterministic and does not require OpenAI or other LLM API keys.
+V5 analysis is deterministic and does not require OpenAI or other LLM API keys.
 
 ```text
 analyzers/
@@ -56,7 +65,7 @@ analyzers/
 └── report_builder.py
 ```
 
-The analyzers use keyword frequency, repeated phrases, source counts, recency, engagement signals, and title/summary clustering.
+The analyzers use keyword frequency, repeated phrases, source counts, recency, engagement signals, title/summary clustering, topic importance scores, and trend scores.
 
 ## Project Structure
 
@@ -72,6 +81,10 @@ universal-research-assistant/
 ├── config/
 │   └── settings.yaml
 ├── collectors/
+├── analyzers/
+├── monitoring/
+├── scheduler/
+├── notifications/
 ├── processors/
 └── exporters/
 ```
@@ -352,6 +365,98 @@ Optional exports:
 
 Exports are written to `reports/`.
 
+`POST /monitor/create`
+
+- Requires `X-API-Key`.
+- Saves a monitor definition under `data/monitors/`.
+- Supported frequencies: `hourly`, `daily`, `weekly`.
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:8000/monitor/create \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: local-dev-secret" \
+  -d '{
+    "name": "AI Video",
+    "query": "AI video tools",
+    "sources": ["google_news", "reddit", "youtube", "web"],
+    "analysis_type": "trend",
+    "frequency": "daily",
+    "days": 30,
+    "limit": 50,
+    "language": "auto",
+    "country": "any",
+    "enabled": true
+  }'
+```
+
+`GET /monitor`
+
+- Requires `X-API-Key`.
+- Lists saved monitors with last run and next run metadata.
+
+`GET /monitor/{id}`
+
+- Requires `X-API-Key`.
+- Returns one saved monitor.
+
+`DELETE /monitor/{id}`
+
+- Requires `X-API-Key`.
+- Deletes one saved monitor.
+
+`POST /monitor/run`
+
+- Requires `X-API-Key`.
+- Manually runs one monitor by ID or all enabled monitors.
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:8000/monitor/run \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: local-dev-secret" \
+  -d '{"force": true}'
+```
+
+`POST /report/daily`
+
+- Requires `X-API-Key`.
+- Generates a daily Markdown and JSON monitoring report.
+- Includes executive summary, top stories, emerging trends, risks, opportunities, most discussed topics, follow-up queries, and sources used.
+
+`POST /report/weekly`
+
+- Requires `X-API-Key`.
+- Generates a weekly Markdown and JSON monitoring report.
+- Includes week summary, trend changes, new topics, topics losing attention, risk changes, and opportunity changes.
+
+`POST /report/compare`
+
+- Requires `X-API-Key`.
+- Compares stored JSON reports by date.
+
+Example:
+
+```json
+{
+  "report_a": "2026-07-01",
+  "report_b": "2026-07-08"
+}
+```
+
+`GET /dashboard`
+
+- Requires `X-API-Key`.
+- Returns running monitors, last run, next run, recent reports, and warnings.
+
+`POST /notify/test`
+
+- Requires `X-API-Key`.
+- Returns placeholder status for `email`, `telegram`, `discord`, or `webhook`.
+- No notification secrets are required for the placeholder framework.
+
 ## Manual CSV Import
 
 Put CSV files in:
@@ -386,6 +491,7 @@ The generated schema includes:
 
 - Production server: `https://universal-research-assistant.onrender.com`
 - `X-API-Key` header authentication for `/search`, `/analyze`, `/report`, and `/batch`
+- `X-API-Key` header authentication for monitoring, report history, dashboard, and notification test endpoints
 - Public `/health`, `/privacy`, and `/sources` endpoints with `security: []`
 
 ## Example ChatGPT Prompts
@@ -424,6 +530,22 @@ Generate a Markdown report about TikTok Shop Thailand pet products.
 
 ```text
 Run batch research for AI video tools and AI agent tools, then summarize trends and risks.
+```
+
+```text
+Create a daily monitor for AI video tools using Google News, Reddit, YouTube, and web.
+```
+
+```text
+Generate a daily monitoring report for recent AI agent tools.
+```
+
+```text
+Generate a weekly report comparing public discussion trends about TikTok Shop Thailand.
+```
+
+```text
+Show the monitoring dashboard.
 ```
 
 ## Deploy To Render

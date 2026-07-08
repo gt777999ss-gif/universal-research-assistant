@@ -1,0 +1,283 @@
+openapi: 3.1.0
+info:
+  title: Universal Public Information Research Assistant
+  description: Universal public information research assistant. It searches permitted
+    public sources, filters spam and duplicates, ranks relevant results, and returns
+    clean JSON. It does not recommend products, suppliers, purchases, or sales strategies
+    unless explicitly asked.
+  version: 1.0.0
+servers:
+- url: https://YOUR-DOMAIN.com
+  description: Production server placeholder
+- url: http://127.0.0.1:8000
+  description: Local development server
+paths:
+  /health:
+    get:
+      summary: Health
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+                title: Response Health Health Get
+  /search:
+    post:
+      summary: Search public information sources
+      description: Searches selected public sources, removes duplicate/spam/advertising
+        results, ranks by relevance, summarizes each result, and returns clean JSON.
+        Requires the `X-API-Key` header.
+      operationId: searchPublicInformation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+            examples:
+              recent_public_discussions:
+                summary: Recent public discussions
+                value:
+                  query: Find recent public discussions about AI search tools
+                  sources:
+                  - google_news
+                  - reddit
+                  days: 30
+                  limit: 10
+                  language: any
+                  country: any
+              youtube_videos:
+                summary: Recent YouTube videos
+                value:
+                  query: Find recent YouTube videos about automatic pet feeders
+                  sources:
+                  - youtube
+                  days: 30
+                  limit: 20
+                  language: en
+                  country: US
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - APIKeyHeader: []
+components:
+  schemas:
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    ResultItem:
+      properties:
+        source:
+          type: string
+          title: Source
+          default: ''
+        title:
+          type: string
+          title: Title
+          default: ''
+        url:
+          type: string
+          title: Url
+          default: ''
+        author:
+          type: string
+          title: Author
+          default: ''
+        date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Date
+        summary:
+          type: string
+          title: Summary
+          default: ''
+        full_text:
+          type: string
+          title: Full Text
+          default: ''
+        image_url:
+          type: string
+          title: Image Url
+          default: ''
+        video_url:
+          type: string
+          title: Video Url
+          default: ''
+        likes:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Likes
+        comments:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Comments
+        shares:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Shares
+        views:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Views
+        reason_selected:
+          type: string
+          title: Reason Selected
+          default: ''
+      type: object
+      title: ResultItem
+    SearchRequest:
+      properties:
+        query:
+          type: string
+          maxLength: 500
+          minLength: 1
+          title: Query
+          description: Natural language public information search request.
+          examples:
+          - Find recent Reddit discussions and Google News articles about AI search
+            tools.
+        sources:
+          items:
+            type: string
+            enum:
+            - youtube
+            - x
+            - tiktok
+            - reddit
+            - google_news
+            - web
+            - manual_csv
+          type: array
+          title: Sources
+          description: Sources to search. Leave empty to use the MVP default sources.
+          examples:
+          - - google_news
+            - reddit
+            - youtube
+            - web
+        days:
+          type: integer
+          maximum: 365.0
+          minimum: 1.0
+          title: Days
+          description: Search recency window in days.
+          default: 30
+        limit:
+          type: integer
+          maximum: 100.0
+          minimum: 1.0
+          title: Limit
+          description: Maximum number of results to return.
+          default: 50
+        language:
+          type: string
+          maxLength: 20
+          minLength: 2
+          title: Language
+          description: Language code or 'any'.
+          default: any
+        country:
+          type: string
+          maxLength: 20
+          minLength: 2
+          title: Country
+          description: Country/region code or 'any'.
+          default: any
+        export_csv:
+          type: boolean
+          title: Export Csv
+          description: When true, also write a CSV report under reports/.
+          default: false
+        export_markdown:
+          type: boolean
+          title: Export Markdown
+          description: When true, also write a Markdown report under reports/.
+          default: false
+      type: object
+      required:
+      - query
+      title: SearchRequest
+    SearchResponse:
+      properties:
+        query:
+          type: string
+          title: Query
+        sources:
+          items:
+            type: string
+          type: array
+          title: Sources
+        results:
+          items:
+            $ref: '#/components/schemas/ResultItem'
+          type: array
+          title: Results
+        exports:
+          additionalProperties:
+            type: string
+          type: object
+          title: Exports
+      type: object
+      required:
+      - query
+      - sources
+      - results
+      title: SearchResponse
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+  securitySchemes:
+    APIKeyHeader:
+      type: apiKey
+      in: header
+      name: X-API-Key

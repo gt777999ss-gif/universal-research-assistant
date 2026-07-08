@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: universal-research-assistant
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 -m uvicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: RESEARCH_ASSISTANT_API_KEY
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: X_BEARER_TOKEN
+        sync: false
+      - key: BING_SEARCH_API_KEY
+        sync: false

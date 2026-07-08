@@ -1,0 +1,42 @@
+app:
+  name: Universal Public Information Research Assistant
+  version: 1.0.0
+  user_agent: universal-research-assistant/1.0
+
+sources:
+  youtube:
+    enabled: true
+    api_key_env: YOUTUBE_API_KEY
+  google_news:
+    enabled: true
+  reddit:
+    enabled: true
+  web:
+    enabled: true
+    bing_api_key_env: BING_SEARCH_API_KEY
+  x:
+    enabled: true
+    bearer_token_env: X_BEARER_TOKEN
+  tiktok:
+    enabled: true
+    mode: placeholder
+  manual_csv:
+    enabled: true
+    directory: data/manual_imports
+
+processing:
+  max_summary_chars: 500
+  duplicate_title_similarity: 0.9
+  spam_terms:
+    - casino
+    - betting
+    - adult
+    - loan
+    - click here
+  ad_terms:
+    - sponsored
+    - advertisement
+    - promoted
+    - coupon
+    - promo code
+    - deal

@@ -1,6 +1,6 @@
-# Universal AI-Powered Public Information Research Assistant V5 Enterprise Monitoring
+# Universal AI-Powered Public Information Research Assistant V6 Autonomous AI Research Agent
 
-FastAPI backend for public information research, deterministic analysis, and monitoring. It searches permitted public sources, filters ads/spam/duplicates, ranks relevant results, summarizes each result, groups repeated themes, identifies trends/risks/opportunities, creates daily and weekly reports, and can continuously monitor public information sources.
+FastAPI backend for public information research, deterministic analysis, monitoring, and autonomous research workflows. It searches permitted public sources, filters ads/spam/duplicates, ranks relevant results, summarizes each result, groups repeated themes, identifies trends/risks/opportunities, creates daily and weekly reports, continuously monitors public information sources, and can plan and run multi-step research investigations.
 
 This is not an e-commerce recommendation system. By default it does not recommend products, suppliers, purchases, or selling strategies.
 
@@ -13,7 +13,7 @@ This is not an e-commerce recommendation system. By default it does not recommen
 - Use X/Twitter only through the official X API when `X_BEARER_TOKEN` is configured.
 - Do not login-scrape TikTok. Use manual CSV imports, licensed providers, or supported public data sources only.
 
-## V5 Enterprise Monitoring Features
+## V6 Autonomous Agent Features
 
 - Single-query and batch-query public information search.
 - Source availability reporting through `GET /sources`.
@@ -35,8 +35,14 @@ This is not an e-commerce recommendation system. By default it does not recommen
 - Monitoring dashboard API through `GET /dashboard`.
 - Notification framework placeholders for email, Telegram, Discord, and webhook through `POST /notify/test`.
 - Report history under `reports/YYYY-MM-DD/`.
+- Research planning through `POST /agent/plan`.
+- Autonomous multi-step research runs through `POST /agent/run`.
+- Long-term topic watches through `POST /agent/watch/create`.
+- Topic change detection through `POST /agent/changes`.
+- Concise research briefings through `POST /agent/briefing`.
+- Deterministic agent modules under `agents/`; no external LLM API key is required.
 
-## V5 Source Coverage
+## V6 Source Coverage
 
 Each source has its own collector module and returns a common `SearchResult` model. If one source is unavailable or not configured, the API continues searching the remaining sources.
 
@@ -54,7 +60,7 @@ Results are merged, filtered for spam/ads/irrelevance, deduplicated by URL and s
 
 ## Analyzer Modules
 
-V5 analysis is deterministic and does not require OpenAI or other LLM API keys.
+V6 analysis and agent planning are deterministic and do not require OpenAI or other LLM API keys.
 
 ```text
 analyzers/
@@ -81,6 +87,7 @@ universal-research-assistant/
 ├── config/
 │   └── settings.yaml
 ├── collectors/
+├── agents/
 ├── analyzers/
 ├── monitoring/
 ├── scheduler/
@@ -457,6 +464,61 @@ Example:
 - Returns placeholder status for `email`, `telegram`, `discord`, or `webhook`.
 - No notification secrets are required for the placeholder framework.
 
+`POST /agent/plan`
+
+- Requires `X-API-Key`.
+- Creates a deterministic multi-step research plan from a broad goal and topic list.
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:8000/agent/plan \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: local-dev-secret" \
+  -d '{
+    "goal": "Monitor AI video generation tools and summarize important changes",
+    "topics": ["Runway", "Google Veo", "Pika", "Kling AI", "OpenAI video"],
+    "sources": ["google_news", "reddit", "youtube", "web"],
+    "timeframe_days": 30,
+    "output_language": "auto"
+  }'
+```
+
+`POST /agent/run`
+
+- Requires `X-API-Key`.
+- Creates a plan, executes planned searches, deduplicates results, analyzes findings, and returns JSON plus Markdown briefing.
+
+`POST /agent/watch/create`
+
+- Requires `X-API-Key`.
+- Creates one or more saved monitors internally for a long-term research goal.
+
+Example:
+
+```json
+{
+  "name": "AI Video Watch",
+  "goal": "Track major AI video generation tool updates",
+  "topics": ["Runway", "Google Veo", "Pika", "Kling AI", "OpenAI video"],
+  "sources": ["google_news", "reddit", "youtube", "web"],
+  "frequency": "daily",
+  "analysis_type": "trend",
+  "enabled": true
+}
+```
+
+`POST /agent/changes`
+
+- Requires `X-API-Key`.
+- Compares current public information signals with prior saved reports when available.
+- If no prior report exists, the current search is saved and returned as the baseline with a warning.
+
+`POST /agent/briefing`
+
+- Requires `X-API-Key`.
+- Generates a concise deterministic briefing with top items and watch-next topics.
+
 ## Manual CSV Import
 
 Put CSV files in:
@@ -491,7 +553,7 @@ The generated schema includes:
 
 - Production server: `https://universal-research-assistant.onrender.com`
 - `X-API-Key` header authentication for `/search`, `/analyze`, `/report`, and `/batch`
-- `X-API-Key` header authentication for monitoring, report history, dashboard, and notification test endpoints
+- `X-API-Key` header authentication for monitoring, report history, dashboard, notification test, and agent endpoints
 - Public `/health`, `/privacy`, and `/sources` endpoints with `security: []`
 
 ## Example ChatGPT Prompts
@@ -546,6 +608,26 @@ Generate a weekly report comparing public discussion trends about TikTok Shop Th
 
 ```text
 Show the monitoring dashboard.
+```
+
+```text
+Plan a research workflow for tracking AI video generation tools.
+```
+
+```text
+Run an autonomous research investigation on Runway, Google Veo, Pika, and Kling AI.
+```
+
+```text
+Create a daily topic watch for AI video tools.
+```
+
+```text
+Detect changes in public discussion about AI video tools.
+```
+
+```text
+Generate a concise daily briefing on AI video tools.
 ```
 
 ## Deploy To Render

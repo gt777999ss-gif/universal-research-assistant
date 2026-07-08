@@ -3,7 +3,7 @@
   "info": {
     "title": "Universal Public Information Research Assistant",
     "description": "Universal public information research assistant. It searches permitted public sources, filters spam and duplicates, ranks relevant results, and returns clean JSON. It does not recommend products, suppliers, purchases, or sales strategies unless explicitly asked.",
-    "version": "5.0.0"
+    "version": "6.0.0"
   },
   "servers": [
     {
@@ -290,6 +290,226 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/agent/plan": {
+      "post": {
+        "summary": "Plan an autonomous research task",
+        "description": "Creates deterministic multi-step public information research plans from a broad goal. Requires the X-API-Key header.",
+        "operationId": "planResearchAgent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPlanResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/agent/run": {
+      "post": {
+        "summary": "Run an autonomous research investigation",
+        "description": "Plans, searches, deduplicates, analyzes, and returns a deterministic research briefing. Requires the X-API-Key header.",
+        "operationId": "runResearchAgent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/agent/watch/create": {
+      "post": {
+        "summary": "Create a long-term topic watch",
+        "description": "Creates one or more monitor definitions for a long-term research goal. Requires the X-API-Key header.",
+        "operationId": "createTopicWatch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TopicWatchCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopicWatchCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/agent/changes": {
+      "post": {
+        "summary": "Detect topic changes",
+        "description": "Compares current public information signals against prior saved reports when available. Requires the X-API-Key header.",
+        "operationId": "detectTopicChanges",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentChangesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentChangesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/agent/briefing": {
+      "post": {
+        "summary": "Generate an autonomous research briefing",
+        "description": "Runs a deterministic public information research briefing for a goal and topics. Requires the X-API-Key header.",
+        "operationId": "generateAgentBriefing",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentBriefingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentBriefingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -686,6 +906,516 @@
   },
   "components": {
     "schemas": {
+      "AgentBriefingRequest": {
+        "properties": {
+          "goal": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Goal"
+          },
+          "topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Topics"
+          },
+          "sources": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "youtube",
+                "x",
+                "tiktok",
+                "reddit",
+                "google_news",
+                "web",
+                "manual_csv"
+              ]
+            },
+            "type": "array",
+            "title": "Sources",
+            "default": [
+              "google_news",
+              "web"
+            ]
+          },
+          "days": {
+            "type": "integer",
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Days",
+            "default": 7
+          },
+          "output_language": {
+            "type": "string",
+            "title": "Output Language",
+            "default": "auto"
+          }
+        },
+        "type": "object",
+        "required": [
+          "goal"
+        ],
+        "title": "AgentBriefingRequest"
+      },
+      "AgentBriefingResponse": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "briefing": {
+            "type": "string",
+            "title": "Briefing"
+          },
+          "top_items": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResult"
+            },
+            "type": "array",
+            "title": "Top Items"
+          },
+          "watch_next": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Watch Next"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "date",
+          "briefing"
+        ],
+        "title": "AgentBriefingResponse"
+      },
+      "AgentChangesRequest": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Topic"
+          },
+          "days": {
+            "type": "integer",
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Days",
+            "default": 30
+          },
+          "sources": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "youtube",
+                "x",
+                "tiktok",
+                "reddit",
+                "google_news",
+                "web",
+                "manual_csv"
+              ]
+            },
+            "type": "array",
+            "title": "Sources",
+            "default": [
+              "google_news",
+              "web"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic"
+        ],
+        "title": "AgentChangesRequest"
+      },
+      "AgentChangesResponse": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "new_topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "New Topics"
+          },
+          "growing_topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Growing Topics"
+          },
+          "declining_topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Declining Topics"
+          },
+          "repeated_topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Repeated Topics"
+          },
+          "new_risks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "New Risks"
+          },
+          "new_opportunities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "New Opportunities"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic",
+          "summary"
+        ],
+        "title": "AgentChangesResponse"
+      },
+      "AgentPlanRequest": {
+        "properties": {
+          "goal": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Goal"
+          },
+          "topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Topics"
+          },
+          "sources": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "youtube",
+                "x",
+                "tiktok",
+                "reddit",
+                "google_news",
+                "web",
+                "manual_csv"
+              ]
+            },
+            "type": "array",
+            "title": "Sources",
+            "default": [
+              "google_news",
+              "web"
+            ]
+          },
+          "timeframe_days": {
+            "type": "integer",
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Timeframe Days",
+            "default": 30
+          },
+          "output_language": {
+            "type": "string",
+            "title": "Output Language",
+            "default": "auto"
+          }
+        },
+        "type": "object",
+        "required": [
+          "goal"
+        ],
+        "title": "AgentPlanRequest"
+      },
+      "AgentPlanResponse": {
+        "properties": {
+          "goal": {
+            "type": "string",
+            "title": "Goal"
+          },
+          "research_plan": {
+            "items": {
+              "$ref": "#/components/schemas/AgentPlanStep"
+            },
+            "type": "array",
+            "title": "Research Plan"
+          },
+          "recommended_monitors": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Recommended Monitors"
+          },
+          "recommended_reports": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Recommended Reports"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "goal",
+          "research_plan"
+        ],
+        "title": "AgentPlanResponse"
+      },
+      "AgentPlanStep": {
+        "properties": {
+          "step": {
+            "type": "integer",
+            "title": "Step"
+          },
+          "task": {
+            "type": "string",
+            "title": "Task"
+          },
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "step",
+          "task",
+          "query",
+          "sources",
+          "reason"
+        ],
+        "title": "AgentPlanStep"
+      },
+      "AgentRunRequest": {
+        "properties": {
+          "goal": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Goal"
+          },
+          "topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Topics"
+          },
+          "sources": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "youtube",
+                "x",
+                "tiktok",
+                "reddit",
+                "google_news",
+                "web",
+                "manual_csv"
+              ]
+            },
+            "type": "array",
+            "title": "Sources",
+            "default": [
+              "google_news",
+              "web"
+            ]
+          },
+          "days": {
+            "type": "integer",
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Days",
+            "default": 30
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 50
+          },
+          "analysis_type": {
+            "type": "string",
+            "enum": [
+              "general",
+              "trend",
+              "market",
+              "competitor",
+              "customer_feedback",
+              "risk",
+              "opportunity"
+            ],
+            "title": "Analysis Type",
+            "default": "trend"
+          },
+          "output_language": {
+            "type": "string",
+            "title": "Output Language",
+            "default": "auto"
+          }
+        },
+        "type": "object",
+        "required": [
+          "goal"
+        ],
+        "title": "AgentRunRequest"
+      },
+      "AgentRunResponse": {
+        "properties": {
+          "goal": {
+            "type": "string",
+            "title": "Goal"
+          },
+          "plan": {
+            "items": {
+              "$ref": "#/components/schemas/AgentPlanStep"
+            },
+            "type": "array",
+            "title": "Plan"
+          },
+          "executed_queries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Executed Queries"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "executive_summary": {
+            "type": "string",
+            "title": "Executive Summary"
+          },
+          "key_findings": {
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            },
+            "type": "array",
+            "title": "Key Findings"
+          },
+          "trend_changes": {
+            "items": {
+              "$ref": "#/components/schemas/TrendItem"
+            },
+            "type": "array",
+            "title": "Trend Changes"
+          },
+          "risks": {
+            "items": {
+              "$ref": "#/components/schemas/RiskItem"
+            },
+            "type": "array",
+            "title": "Risks"
+          },
+          "opportunities": {
+            "items": {
+              "$ref": "#/components/schemas/OpportunityItem"
+            },
+            "type": "array",
+            "title": "Opportunities"
+          },
+          "recommended_next_steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recommended Next Steps"
+          },
+          "recommended_follow_up_queries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recommended Follow Up Queries"
+          },
+          "top_results": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResult"
+            },
+            "type": "array",
+            "title": "Top Results"
+          },
+          "markdown_briefing": {
+            "type": "string",
+            "title": "Markdown Briefing",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "goal",
+          "plan",
+          "executive_summary"
+        ],
+        "title": "AgentRunResponse"
+      },
       "AnalysisRequest": {
         "properties": {
           "query": {
@@ -2234,6 +2964,121 @@
           "sources"
         ],
         "title": "SourcesResponse"
+      },
+      "TopicWatchCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "goal": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Goal"
+          },
+          "topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Topics"
+          },
+          "sources": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "youtube",
+                "x",
+                "tiktok",
+                "reddit",
+                "google_news",
+                "web",
+                "manual_csv"
+              ]
+            },
+            "type": "array",
+            "title": "Sources",
+            "default": [
+              "google_news",
+              "web"
+            ]
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "hourly",
+              "daily",
+              "weekly"
+            ],
+            "title": "Frequency",
+            "default": "daily"
+          },
+          "analysis_type": {
+            "type": "string",
+            "enum": [
+              "general",
+              "trend",
+              "market",
+              "competitor",
+              "customer_feedback",
+              "risk",
+              "opportunity"
+            ],
+            "title": "Analysis Type",
+            "default": "trend"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "goal"
+        ],
+        "title": "TopicWatchCreateRequest"
+      },
+      "TopicWatchCreateResponse": {
+        "properties": {
+          "watch_id": {
+            "type": "string",
+            "title": "Watch Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "created_monitors": {
+            "items": {
+              "$ref": "#/components/schemas/Monitor"
+            },
+            "type": "array",
+            "title": "Created Monitors"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "created"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "watch_id",
+          "name"
+        ],
+        "title": "TopicWatchCreateResponse"
       },
       "TrendItem": {
         "properties": {

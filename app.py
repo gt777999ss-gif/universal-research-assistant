@@ -11,6 +11,11 @@ from fastapi.responses import HTMLResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from agents.briefing import build_concise_briefing
+from agents.change_detector import detect_changes
+from agents.planner import build_research_plan, resolve_language
+from agents.runner import build_agent_briefing, recommended_next_steps
+from agents.watcher import build_watch_monitors
 from analyzers.opportunity_analyzer import analyze_opportunities
 from analyzers.report_builder import (
     build_executive_summary,
@@ -304,6 +309,109 @@ class DashboardResponse(BaseModel):
     warnings: List[str] = Field(default_factory=list)
 
 
+class AgentPlanRequest(BaseModel):
+    goal: str = Field(..., min_length=1, max_length=500)
+    topics: List[str] = Field(default_factory=list)
+    sources: List[SourceName] = Field(default=DEFAULT_SOURCES)
+    timeframe_days: int = Field(default=30, ge=1, le=365)
+    output_language: str = "auto"
+
+
+class AgentPlanStep(BaseModel):
+    step: int
+    task: str
+    query: str
+    sources: List[str]
+    reason: str
+
+
+class AgentPlanResponse(BaseModel):
+    goal: str
+    research_plan: List[AgentPlanStep]
+    recommended_monitors: List[Dict[str, Any]] = Field(default_factory=list)
+    recommended_reports: List[Dict[str, Any]] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+
+
+class AgentRunRequest(BaseModel):
+    goal: str = Field(..., min_length=1, max_length=500)
+    topics: List[str] = Field(default_factory=list)
+    sources: List[SourceName] = Field(default=DEFAULT_SOURCES)
+    days: int = Field(default=30, ge=1, le=365)
+    limit: int = Field(default=50, ge=1, le=100)
+    analysis_type: AnalysisType = "trend"
+    output_language: str = "auto"
+
+
+class AgentRunResponse(BaseModel):
+    goal: str
+    plan: List[AgentPlanStep]
+    executed_queries: List[str] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+    executive_summary: str
+    key_findings: List[Finding] = Field(default_factory=list)
+    trend_changes: List[TrendItem] = Field(default_factory=list)
+    risks: List[RiskItem] = Field(default_factory=list)
+    opportunities: List[OpportunityItem] = Field(default_factory=list)
+    recommended_next_steps: List[str] = Field(default_factory=list)
+    recommended_follow_up_queries: List[str] = Field(default_factory=list)
+    top_results: List[SearchResult] = Field(default_factory=list)
+    markdown_briefing: str = ""
+
+
+class TopicWatchCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    goal: str = Field(..., min_length=1, max_length=500)
+    topics: List[str] = Field(default_factory=list)
+    sources: List[SourceName] = Field(default=DEFAULT_SOURCES)
+    frequency: MonitorFrequency = "daily"
+    analysis_type: AnalysisType = "trend"
+    enabled: bool = True
+
+
+class TopicWatchCreateResponse(BaseModel):
+    watch_id: str
+    name: str
+    created_monitors: List[Monitor] = Field(default_factory=list)
+    status: str = "created"
+    warnings: List[str] = Field(default_factory=list)
+
+
+class AgentChangesRequest(BaseModel):
+    topic: str = Field(..., min_length=1, max_length=500)
+    days: int = Field(default=30, ge=1, le=365)
+    sources: List[SourceName] = Field(default=DEFAULT_SOURCES)
+
+
+class AgentChangesResponse(BaseModel):
+    topic: str
+    new_topics: List[str] = Field(default_factory=list)
+    growing_topics: List[str] = Field(default_factory=list)
+    declining_topics: List[str] = Field(default_factory=list)
+    repeated_topics: List[str] = Field(default_factory=list)
+    new_risks: List[str] = Field(default_factory=list)
+    new_opportunities: List[str] = Field(default_factory=list)
+    summary: str
+    warnings: List[str] = Field(default_factory=list)
+
+
+class AgentBriefingRequest(BaseModel):
+    goal: str = Field(..., min_length=1, max_length=500)
+    topics: List[str] = Field(default_factory=list)
+    sources: List[SourceName] = Field(default=DEFAULT_SOURCES)
+    days: int = Field(default=7, ge=1, le=365)
+    output_language: str = "auto"
+
+
+class AgentBriefingResponse(BaseModel):
+    title: str
+    date: str
+    briefing: str
+    top_items: List[SearchResult] = Field(default_factory=list)
+    watch_next: List[str] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+
+
 settings = yaml.safe_load(open("config/settings.yaml", "r", encoding="utf-8"))
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 scheduler_instance: Optional[MonitorScheduler] = None
@@ -518,6 +626,156 @@ async def dashboard() -> DashboardResponse:
         next_run=next_run,
         recent_reports=recent_reports(),
         warnings=unique_strings(warnings),
+    )
+
+
+@app.post(
+    "/agent/plan",
+    response_model=AgentPlanResponse,
+    operation_id="planResearchAgent",
+    summary="Plan an autonomous research task",
+    description="Creates deterministic multi-step public information research plans from a broad goal. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def agent_plan(request: AgentPlanRequest) -> AgentPlanResponse:
+    plan = build_research_plan(request.goal, request.topics, request.sources, request.timeframe_days, request.output_language)
+    warnings = source_warnings(request.sources)
+    return AgentPlanResponse(**{**plan, "warnings": unique_strings(plan.get("warnings", []) + warnings)})
+
+
+@app.post(
+    "/agent/run",
+    response_model=AgentRunResponse,
+    operation_id="runResearchAgent",
+    summary="Run an autonomous research investigation",
+    description="Plans, searches, deduplicates, analyzes, and returns a deterministic research briefing. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def agent_run(request: AgentRunRequest) -> AgentRunResponse:
+    language = resolve_language(request.goal, request.topics, request.output_language)
+    plan_payload = build_research_plan(request.goal, request.topics, request.sources, request.days, request.output_language)
+    plan_steps = plan_payload["research_plan"]
+    executed_queries = [step["query"] for step in plan_steps]
+    analysis_request = AnalysisRequest(
+        queries=executed_queries,
+        sources=request.sources,
+        days=request.days,
+        limit=request.limit,
+        language="any",
+        country="any",
+        analysis_type=request.analysis_type,
+        output_language=language,
+    )
+    pipeline = await run_search_pipeline(analysis_request)
+    analysis = build_analysis_response(analysis_request, pipeline)
+    analysis_dict = analysis.model_dump()
+    markdown = build_agent_briefing(request.goal, plan_steps, executed_queries, analysis_dict, language)
+    return AgentRunResponse(
+        goal=request.goal,
+        plan=[AgentPlanStep(**step) for step in plan_steps],
+        executed_queries=executed_queries,
+        warnings=unique_strings(plan_payload.get("warnings", []) + analysis.warnings),
+        executive_summary=analysis.executive_summary,
+        key_findings=analysis.key_findings,
+        trend_changes=analysis.trends,
+        risks=analysis.risks,
+        opportunities=analysis.opportunities,
+        recommended_next_steps=recommended_next_steps(request.goal, language),
+        recommended_follow_up_queries=analysis.recommended_follow_up_queries,
+        top_results=analysis.top_results,
+        markdown_briefing=markdown,
+    )
+
+
+@app.post(
+    "/agent/watch/create",
+    response_model=TopicWatchCreateResponse,
+    operation_id="createTopicWatch",
+    summary="Create a long-term topic watch",
+    description="Creates one or more monitor definitions for a long-term research goal. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def agent_watch_create(request: TopicWatchCreateRequest) -> TopicWatchCreateResponse:
+    watch = build_watch_monitors(
+        request.name,
+        request.goal,
+        request.topics,
+        request.sources,
+        request.frequency,
+        request.analysis_type,
+        request.enabled,
+    )
+    created = [Monitor(**create_monitor(payload)) for payload in watch["monitor_payloads"]]
+    return TopicWatchCreateResponse(
+        watch_id=watch["watch_id"],
+        name=request.name,
+        created_monitors=created,
+        status="created",
+        warnings=source_warnings(request.sources),
+    )
+
+
+@app.post(
+    "/agent/changes",
+    response_model=AgentChangesResponse,
+    operation_id="detectTopicChanges",
+    summary="Detect topic changes",
+    description="Compares current public information signals against prior saved reports when available. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def agent_changes(request: AgentChangesRequest) -> AgentChangesResponse:
+    analysis_request = AnalysisRequest(
+        query=request.topic,
+        sources=request.sources,
+        days=request.days,
+        limit=50,
+        language="any",
+        country="any",
+        analysis_type="trend",
+        output_language="auto",
+    )
+    current = await build_period_report(analysis_request, "daily", monitor_name=f"changes-{request.topic}")
+    prior = latest_report_before_today()
+    warnings = list(current.warnings)
+    if not prior:
+        warnings.append("No prior saved report was found; current search results are being used as the baseline.")
+        prior = {}
+    changes = detect_changes(current.json_report, prior)
+    summary = build_change_summary(request.topic, changes, bool(prior))
+    return AgentChangesResponse(topic=request.topic, summary=summary, warnings=unique_strings(warnings), **changes)
+
+
+@app.post(
+    "/agent/briefing",
+    response_model=AgentBriefingResponse,
+    operation_id="generateAgentBriefing",
+    summary="Generate an autonomous research briefing",
+    description="Runs a deterministic public information research briefing for a goal and topics. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def agent_briefing(request: AgentBriefingRequest) -> AgentBriefingResponse:
+    language = resolve_language(request.goal, request.topics, request.output_language)
+    queries = [request.goal] + [f"{topic} recent developments updates" for topic in request.topics]
+    analysis_request = AnalysisRequest(
+        queries=queries,
+        sources=request.sources,
+        days=request.days,
+        limit=25,
+        language="any",
+        country="any",
+        analysis_type="trend",
+        output_language=language,
+    )
+    pipeline = await run_search_pipeline(analysis_request)
+    analysis = build_analysis_response(analysis_request, pipeline)
+    briefing = build_concise_briefing(request.goal, request.topics, analysis.model_dump(), language)
+    return AgentBriefingResponse(
+        title=briefing["title"],
+        date=briefing["date"],
+        briefing=briefing["briefing"],
+        top_items=[SearchResult(**item) if isinstance(item, dict) else item for item in briefing["top_items"]],
+        watch_next=briefing["watch_next"],
+        warnings=analysis.warnings,
     )
 
 
@@ -866,6 +1124,16 @@ def latest_report_before_today() -> Optional[Dict[str, Any]]:
         if payload:
             return payload
     return None
+
+
+def build_change_summary(topic: str, changes: Dict[str, List[str]], has_prior: bool) -> str:
+    if not has_prior:
+        return f"No prior history was found for '{topic}'. Current public information has been saved as a baseline for future comparisons."
+    return (
+        f"Change detection for '{topic}' found {len(changes.get('new_topics', []))} new topic(s), "
+        f"{len(changes.get('growing_topics', []))} growing topic(s), and "
+        f"{len(changes.get('declining_topics', []))} declining topic(s)."
+    )
 
 
 async def collect_source(

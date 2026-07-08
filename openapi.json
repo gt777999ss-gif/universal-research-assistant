@@ -32,6 +32,26 @@
         "security": []
       }
     },
+    "/privacy": {
+      "get": {
+        "summary": "Privacy policy",
+        "description": "Public privacy policy page. Does not require an API key.",
+        "operationId": "getPrivacyPolicy",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
     "/search": {
       "post": {
         "summary": "Search public information sources",

@@ -16,6 +16,7 @@ from agents.change_detector import detect_changes
 from agents.planner import build_research_plan, resolve_language
 from agents.runner import build_agent_briefing, recommended_next_steps
 from agents.watcher import build_watch_monitors
+from ai_providers.factory import run_ai_analysis
 from analyzers.opportunity_analyzer import analyze_opportunities
 from analyzers.report_builder import (
     build_executive_summary,
@@ -29,6 +30,7 @@ from analyzers.theme_extractor import cluster_similar_stories, extract_themes, s
 from analyzers.trend_analyzer import analyze_trends
 from collectors import COLLECTORS
 from exporters.csv_exporter import export_csv
+from exporters.report_exporter import export_report
 from models import SearchResult
 from monitoring.store import (
     create_monitor,
@@ -54,6 +56,8 @@ SourceName = Literal["youtube", "x", "tiktok", "reddit", "google_news", "web", "
 AnalysisType = Literal["general", "trend", "market", "competitor", "customer_feedback", "risk", "opportunity"]
 MonitorFrequency = Literal["hourly", "daily", "weekly"]
 NotificationChannel = Literal["email", "telegram", "discord", "webhook"]
+AIProviderName = Literal["auto", "gemini", "openai", "none"]
+ReportExportFormat = Literal["markdown", "html", "json", "pdf"]
 DEFAULT_SOURCES: List[SourceName] = ["google_news", "web"]
 ALL_SOURCES: List[SourceName] = ["google_news", "reddit", "youtube", "x", "tiktok", "web", "manual_csv"]
 
@@ -122,6 +126,8 @@ class SearchResponse(BaseModel):
 class AnalysisRequest(ResearchRequest):
     analysis_type: AnalysisType = "general"
     output_language: str = Field(default="auto", description="auto, English, Chinese, or a language code.")
+    use_ai: bool = Field(default=False, description="When true, optionally enhance deterministic analysis with a configured AI provider.")
+    ai_provider: AIProviderName = Field(default="auto", description="AI provider preference: auto, gemini, openai, or none.")
 
 
 class Finding(BaseModel):
@@ -341,6 +347,8 @@ class AgentRunRequest(BaseModel):
     limit: int = Field(default=50, ge=1, le=100)
     analysis_type: AnalysisType = "trend"
     output_language: str = "auto"
+    use_ai: bool = False
+    ai_provider: AIProviderName = "auto"
 
 
 class AgentRunResponse(BaseModel):
@@ -401,6 +409,8 @@ class AgentBriefingRequest(BaseModel):
     sources: List[SourceName] = Field(default=DEFAULT_SOURCES)
     days: int = Field(default=7, ge=1, le=365)
     output_language: str = "auto"
+    use_ai: bool = False
+    ai_provider: AIProviderName = "auto"
 
 
 class AgentBriefingResponse(BaseModel):
@@ -410,6 +420,24 @@ class AgentBriefingResponse(BaseModel):
     top_items: List[SearchResult] = Field(default_factory=list)
     watch_next: List[str] = Field(default_factory=list)
     warnings: List[str] = Field(default_factory=list)
+
+
+class ReportExportRequest(AnalysisRequest):
+    format: ReportExportFormat = "html"
+
+
+class ReportExportResponse(BaseModel):
+    format: str
+    export_path: str
+    download_url: str = ""
+    warnings: List[str] = Field(default_factory=list)
+
+
+class MCPManifestResponse(BaseModel):
+    name: str
+    version: str
+    description: str
+    tools: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 settings = yaml.safe_load(open("config/settings.yaml", "r", encoding="utf-8"))
@@ -525,6 +553,55 @@ def verify_api_key(request: Request, api_key: Optional[str] = Security(api_key_h
 )
 async def sources() -> SourcesResponse:
     return SourcesResponse(sources=[source_status(source) for source in ALL_SOURCES])
+
+
+@app.get(
+    "/ui",
+    response_class=HTMLResponse,
+    operation_id="getUIDashboard",
+    summary="Simple public UI dashboard",
+    description="Public HTML dashboard showing service status, source status, monitor summaries, recent reports, and documentation links.",
+    openapi_extra={"security": []},
+)
+async def ui_dashboard() -> HTMLResponse:
+    monitor_items = list_monitors()
+    source_items = [source_status(source).model_dump() for source in ALL_SOURCES]
+    html = ["<!doctype html><html><head><meta charset='utf-8'><title>Universal Research Assistant</title>"]
+    html.append("<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:40px;line-height:1.5;color:#111827}table{border-collapse:collapse;width:100%;margin:16px 0}td,th{border:1px solid #d1d5db;padding:8px;text-align:left}a{color:#2563eb}</style></head><body>")
+    html.append("<h1>Universal Research Assistant</h1><p>Status: <strong>ok</strong></p>")
+    html.append("<h2>Available Sources</h2><table><tr><th>Source</th><th>Available</th><th>Configured</th><th>Note</th></tr>")
+    for item in source_items:
+        html.append(f"<tr><td>{item['name']}</td><td>{item['available']}</td><td>{item['configured']}</td><td>{item.get('note','')}</td></tr>")
+    html.append("</table><h2>Monitors</h2><table><tr><th>Name</th><th>Enabled</th><th>Last Run</th><th>Next Run</th></tr>")
+    for monitor in monitor_items[:20]:
+        html.append(f"<tr><td>{monitor.get('name','')}</td><td>{monitor.get('enabled')}</td><td>{monitor.get('last_run') or ''}</td><td>{monitor.get('next_run') or ''}</td></tr>")
+    html.append("</table><h2>Recent Reports</h2><ul>")
+    for report_item in recent_reports(10):
+        html.append(f"<li>{report_item.get('date','')} - {report_item.get('name','')}</li>")
+    html.append("</ul><h2>Quick Links</h2><ul><li><a href='/health'>Health</a></li><li><a href='/sources'>Sources</a></li><li><a href='/privacy'>Privacy</a></li><li><a href='/openapi.json'>OpenAPI JSON</a></li></ul>")
+    html.append("</body></html>")
+    return HTMLResponse("".join(html))
+
+
+@app.get(
+    "/mcp/manifest",
+    response_model=MCPManifestResponse,
+    operation_id="getMCPManifest",
+    summary="MCP compatibility manifest",
+    description="Public manifest describing MCP-compatible wrapper endpoints.",
+    openapi_extra={"security": []},
+)
+async def mcp_manifest() -> MCPManifestResponse:
+    return MCPManifestResponse(
+        name="Universal Research Assistant",
+        version=settings["app"]["version"],
+        description="MCP-compatible wrappers for public information search, analysis, and briefing.",
+        tools=[
+            {"name": "mcpSearch", "path": "/mcp/search", "method": "POST"},
+            {"name": "mcpAnalyze", "path": "/mcp/analyze", "method": "POST"},
+            {"name": "mcpBriefing", "path": "/mcp/briefing", "method": "POST"},
+        ],
+    )
 
 
 @app.post(
@@ -665,9 +742,12 @@ async def agent_run(request: AgentRunRequest) -> AgentRunResponse:
         country="any",
         analysis_type=request.analysis_type,
         output_language=language,
+        use_ai=request.use_ai,
+        ai_provider=request.ai_provider,
     )
     pipeline = await run_search_pipeline(analysis_request)
     analysis = build_analysis_response(analysis_request, pipeline)
+    analysis = await maybe_enhance_analysis(analysis, analysis_request, pipeline)
     analysis_dict = analysis.model_dump()
     markdown = build_agent_briefing(request.goal, plan_steps, executed_queries, analysis_dict, language)
     return AgentRunResponse(
@@ -765,9 +845,12 @@ async def agent_briefing(request: AgentBriefingRequest) -> AgentBriefingResponse
         country="any",
         analysis_type="trend",
         output_language=language,
+        use_ai=request.use_ai,
+        ai_provider=request.ai_provider,
     )
     pipeline = await run_search_pipeline(analysis_request)
     analysis = build_analysis_response(analysis_request, pipeline)
+    analysis = await maybe_enhance_analysis(analysis, analysis_request, pipeline)
     briefing = build_concise_briefing(request.goal, request.topics, analysis.model_dump(), language)
     return AgentBriefingResponse(
         title=briefing["title"],
@@ -852,7 +935,8 @@ async def search(request: SearchRequest) -> SearchResponse:
 )
 async def analyze(request: AnalysisRequest) -> AnalysisResponse:
     pipeline = await run_search_pipeline(request)
-    return build_analysis_response(request, pipeline)
+    analysis = build_analysis_response(request, pipeline)
+    return await maybe_enhance_analysis(analysis, request, pipeline)
 
 
 @app.post(
@@ -866,6 +950,7 @@ async def analyze(request: AnalysisRequest) -> AnalysisResponse:
 async def report(request: AnalysisRequest) -> ReportResponse:
     pipeline = await run_search_pipeline(request)
     analysis = build_analysis_response(request, pipeline)
+    analysis = await maybe_enhance_analysis(analysis, request, pipeline)
     export_path = save_markdown_report(analysis.markdown_report) if request.export_markdown else ""
     query_label = query_label_from_request(request)
     return ReportResponse(
@@ -876,6 +961,60 @@ async def report(request: AnalysisRequest) -> ReportResponse:
         warnings=analysis.warnings,
         export_path=export_path,
     )
+
+
+@app.post(
+    "/report/export",
+    response_model=ReportExportResponse,
+    operation_id="exportResearchReport",
+    summary="Export an enterprise research report",
+    description="Generates and exports a research report as Markdown, HTML, JSON, or PDF placeholder. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def report_export(request: ReportExportRequest) -> ReportExportResponse:
+    pipeline = await run_search_pipeline(request)
+    analysis = build_analysis_response(request, pipeline)
+    analysis = await maybe_enhance_analysis(analysis, request, pipeline)
+    payload = analysis.model_dump()
+    export = export_report(analysis.markdown_report, payload, request.format)
+    export["warnings"] = unique_strings(export.get("warnings", []) + analysis.warnings)
+    return ReportExportResponse(**export)
+
+
+@app.post(
+    "/mcp/search",
+    response_model=SearchResponse,
+    operation_id="mcpSearch",
+    summary="MCP search wrapper",
+    description="MCP-compatible wrapper around /search. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def mcp_search(request: SearchRequest) -> SearchResponse:
+    return await search(request)
+
+
+@app.post(
+    "/mcp/analyze",
+    response_model=AnalysisResponse,
+    operation_id="mcpAnalyze",
+    summary="MCP analyze wrapper",
+    description="MCP-compatible wrapper around /analyze. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def mcp_analyze(request: AnalysisRequest) -> AnalysisResponse:
+    return await analyze(request)
+
+
+@app.post(
+    "/mcp/briefing",
+    response_model=AgentBriefingResponse,
+    operation_id="mcpBriefing",
+    summary="MCP briefing wrapper",
+    description="MCP-compatible wrapper around /agent/briefing. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def mcp_briefing(request: AgentBriefingRequest) -> AgentBriefingResponse:
+    return await agent_briefing(request)
 
 
 @app.post(
@@ -1124,6 +1263,27 @@ def latest_report_before_today() -> Optional[Dict[str, Any]]:
         if payload:
             return payload
     return None
+
+
+async def maybe_enhance_analysis(
+    analysis: AnalysisResponse,
+    request: AnalysisRequest,
+    pipeline: Dict[str, Any],
+) -> AnalysisResponse:
+    if not request.use_ai or request.ai_provider == "none":
+        return analysis
+    try:
+        language = resolve_output_language(request, pipeline["original_queries"])
+        ai_result = await run_ai_analysis(query_label_from_request(request), pipeline["results"], language, request.ai_provider)
+        if ai_result.get("warning"):
+            analysis.warnings = unique_strings(analysis.warnings + [ai_result["warning"]])
+        content = str(ai_result.get("content", "")).strip()
+        if content:
+            analysis.executive_summary = content
+            analysis.markdown_report = f"# AI Enhanced Research Analysis: {query_label_from_request(request)}\n\n## Executive Summary\n\n{content}\n\n" + analysis.markdown_report
+    except Exception as exc:
+        analysis.warnings = unique_strings(analysis.warnings + [f"AI enhancement failed; deterministic analysis was used. {exc}"])
+    return analysis
 
 
 def build_change_summary(topic: str, changes: Dict[str, List[str]], has_prior: bool) -> str:

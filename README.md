@@ -1,6 +1,6 @@
-# Universal AI-Powered Public Information Research Assistant V6 Autonomous AI Research Agent
+# Universal AI-Powered Public Information Research Assistant V7 Enterprise AI Platform
 
-FastAPI backend for public information research, deterministic analysis, monitoring, and autonomous research workflows. It searches permitted public sources, filters ads/spam/duplicates, ranks relevant results, summarizes each result, groups repeated themes, identifies trends/risks/opportunities, creates daily and weekly reports, continuously monitors public information sources, and can plan and run multi-step research investigations.
+FastAPI backend for public information research, optional AI-enhanced analysis, monitoring, autonomous research workflows, report exports, UI dashboard, and MCP-compatible wrappers. It searches permitted public sources, filters ads/spam/duplicates, ranks relevant results, summarizes each result, groups repeated themes, identifies trends/risks/opportunities, creates daily and weekly reports, continuously monitors public information sources, and can plan and run multi-step research investigations.
 
 This is not an e-commerce recommendation system. By default it does not recommend products, suppliers, purchases, or selling strategies.
 
@@ -13,7 +13,7 @@ This is not an e-commerce recommendation system. By default it does not recommen
 - Use X/Twitter only through the official X API when `X_BEARER_TOKEN` is configured.
 - Do not login-scrape TikTok. Use manual CSV imports, licensed providers, or supported public data sources only.
 
-## V6 Autonomous Agent Features
+## V7 Enterprise AI Platform Features
 
 - Single-query and batch-query public information search.
 - Source availability reporting through `GET /sources`.
@@ -41,8 +41,15 @@ This is not an e-commerce recommendation system. By default it does not recommen
 - Topic change detection through `POST /agent/changes`.
 - Concise research briefings through `POST /agent/briefing`.
 - Deterministic agent modules under `agents/`; no external LLM API key is required.
+- Optional AI provider framework under `ai_providers/`.
+- Supported AI providers: Gemini, OpenAI, and fallback deterministic mode.
+- AI-enhanced `/analyze`, `/report`, `/agent/run`, and `/agent/briefing` with `use_ai` and `ai_provider`.
+- Enterprise report export through `POST /report/export` for Markdown, HTML, JSON, and PDF placeholder.
+- Public HTML dashboard through `GET /ui`.
+- MCP-compatible endpoints: `GET /mcp/manifest`, `POST /mcp/search`, `POST /mcp/analyze`, and `POST /mcp/briefing`.
+- Webhook notification test support with `WEBHOOK_URL` when configured.
 
-## V6 Source Coverage
+## V7 Source Coverage
 
 Each source has its own collector module and returns a common `SearchResult` model. If one source is unavailable or not configured, the API continues searching the remaining sources.
 
@@ -60,7 +67,7 @@ Results are merged, filtered for spam/ads/irrelevance, deduplicated by URL and s
 
 ## Analyzer Modules
 
-V6 analysis and agent planning are deterministic and do not require OpenAI or other LLM API keys.
+V7 analysis and agent planning remain deterministic by default. AI enhancement is optional and only runs when `use_ai: true` and a configured provider key is available.
 
 ```text
 analyzers/
@@ -87,6 +94,7 @@ universal-research-assistant/
 ├── config/
 │   └── settings.yaml
 ├── collectors/
+├── ai_providers/
 ├── agents/
 ├── analyzers/
 ├── monitoring/
@@ -112,6 +120,22 @@ X_BEARER_TOKEN=...
 BING_SEARCH_API_KEY=...
 ```
 
+Optional AI provider variables:
+
+```bash
+AI_PROVIDER=auto
+GEMINI_API_KEY=...
+OPENAI_API_KEY=...
+```
+
+`AI_PROVIDER` supports `auto`, `gemini`, `openai`, and `none`. If no AI key is configured, the API keeps deterministic analysis working and returns a warning when `use_ai` is requested.
+
+Optional notification webhook:
+
+```bash
+WEBHOOK_URL=https://example.com/webhook
+```
+
 Enable YouTube search by creating a YouTube Data API key in Google Cloud and setting:
 
 ```bash
@@ -128,6 +152,20 @@ Enable general web search by creating a Bing Web Search API key and setting:
 
 ```bash
 export BING_SEARCH_API_KEY="..."
+```
+
+Enable Gemini AI enhancement by creating a Gemini API key and setting:
+
+```bash
+export AI_PROVIDER="gemini"
+export GEMINI_API_KEY="..."
+```
+
+Enable OpenAI AI enhancement by creating an OpenAI API key and setting:
+
+```bash
+export AI_PROVIDER="openai"
+export OPENAI_API_KEY="..."
 ```
 
 Copy the example file locally:
@@ -462,7 +500,65 @@ Example:
 
 - Requires `X-API-Key`.
 - Returns placeholder status for `email`, `telegram`, `discord`, or `webhook`.
-- No notification secrets are required for the placeholder framework.
+- Uses `WEBHOOK_URL` for webhook tests when configured.
+- Email, Telegram, and Discord remain placeholders unless future provider credentials are added.
+
+`POST /report/export`
+
+- Requires `X-API-Key`.
+- Generates and exports a report as `markdown`, `html`, `json`, or `pdf`.
+- PDF is a placeholder when PDF dependencies are not configured.
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:8000/report/export \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: local-dev-secret" \
+  -d '{
+    "query": "AI video tools",
+    "sources": ["google_news", "web"],
+    "limit": 10,
+    "format": "html",
+    "use_ai": false
+  }'
+```
+
+`GET /ui`
+
+- Public HTML dashboard.
+- Shows service status, available sources, monitor list, recent reports, and documentation links.
+- Does not expose API keys.
+
+`GET /mcp/manifest`
+
+- Public MCP compatibility manifest.
+
+`POST /mcp/search`
+
+- Requires `X-API-Key`.
+- MCP-compatible wrapper around `/search`.
+
+`POST /mcp/analyze`
+
+- Requires `X-API-Key`.
+- MCP-compatible wrapper around `/analyze`.
+
+`POST /mcp/briefing`
+
+- Requires `X-API-Key`.
+- MCP-compatible wrapper around `/agent/briefing`.
+
+AI-enhanced analysis fields:
+
+```json
+{
+  "use_ai": true,
+  "ai_provider": "auto"
+}
+```
+
+These optional fields are supported by `/analyze`, `/report`, `/report/export`, `/agent/run`, and `/agent/briefing`. If the selected AI provider is missing or fails, the API returns a warning and falls back to deterministic analysis.
 
 `POST /agent/plan`
 
@@ -630,6 +726,22 @@ Detect changes in public discussion about AI video tools.
 Generate a concise daily briefing on AI video tools.
 ```
 
+```text
+Use AI-enhanced analysis to summarize recent public information about AI video tools.
+```
+
+```text
+Export an HTML enterprise report about AI search tools.
+```
+
+```text
+Open the public UI dashboard.
+```
+
+```text
+Use the MCP search wrapper to find recent Google News about autonomous agents.
+```
+
 ## Deploy To Render
 
 1. Push this project to a GitHub repository.
@@ -650,6 +762,10 @@ RESEARCH_ASSISTANT_API_KEY=your-production-secret
 YOUTUBE_API_KEY=optional
 X_BEARER_TOKEN=optional
 BING_SEARCH_API_KEY=optional
+AI_PROVIDER=auto
+GEMINI_API_KEY=optional
+OPENAI_API_KEY=optional
+WEBHOOK_URL=optional
 ```
 
 6. Deploy.
@@ -682,6 +798,10 @@ RESEARCH_ASSISTANT_API_KEY=your-production-secret
 YOUTUBE_API_KEY=optional
 X_BEARER_TOKEN=optional
 BING_SEARCH_API_KEY=optional
+AI_PROVIDER=auto
+GEMINI_API_KEY=optional
+OPENAI_API_KEY=optional
+WEBHOOK_URL=optional
 ```
 
 7. Deploy and generate a public domain.

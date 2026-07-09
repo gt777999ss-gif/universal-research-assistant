@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import os
 from typing import Any, Dict
+
+import httpx
 
 
 SUPPORTED_CHANNELS = {"email", "telegram", "discord", "webhook"}
@@ -15,12 +18,24 @@ async def send_test_notification(channel: str, target: str = "", message: str = 
             "detail": f"Supported channels: {', '.join(sorted(SUPPORTED_CHANNELS))}.",
         }
     if channel == "webhook":
+        webhook_url = os.getenv("WEBHOOK_URL", "")
+        if webhook_url:
+            async with httpx.AsyncClient(timeout=15) as client:
+                response = await client.post(webhook_url, json={"message": message})
+                response.raise_for_status()
+            return {
+                "channel": channel,
+                "target": "configured_webhook",
+                "sent": True,
+                "status": "sent",
+                "detail": "Webhook notification test was sent.",
+            }
         return {
             "channel": channel,
             "target": target,
             "sent": False,
-            "status": "placeholder",
-            "detail": "Webhook delivery framework is present; outbound delivery is intentionally not configured.",
+            "status": "not_configured",
+            "detail": "WEBHOOK_URL is not configured; webhook delivery was not attempted.",
         }
     return {
         "channel": channel,

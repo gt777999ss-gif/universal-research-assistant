@@ -5,7 +5,7 @@ info:
     public sources, filters spam and duplicates, ranks relevant results, and returns
     clean JSON. It does not recommend products, suppliers, purchases, or sales strategies
     unless explicitly asked.
-  version: 6.0.0
+  version: 7.0.0
 servers:
 - url: https://universal-research-assistant.onrender.com
   description: Production server
@@ -48,6 +48,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SourcesResponse'
+      security: []
+  /ui:
+    get:
+      summary: Simple public UI dashboard
+      description: Public HTML dashboard showing service status, source status, monitor
+        summaries, recent reports, and documentation links.
+      operationId: getUIDashboard
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+      security: []
+  /mcp/manifest:
+    get:
+      summary: MCP compatibility manifest
+      description: Public manifest describing MCP-compatible wrapper endpoints.
+      operationId: getMCPManifest
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MCPManifestResponse'
       security: []
   /monitor/create:
     post:
@@ -428,6 +455,113 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
       security:
       - APIKeyHeader: []
+  /report/export:
+    post:
+      summary: Export an enterprise research report
+      description: Generates and exports a research report as Markdown, HTML, JSON,
+        or PDF placeholder. Requires the X-API-Key header.
+      operationId: exportResearchReport
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportExportRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportExportResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - APIKeyHeader: []
+  /mcp/search:
+    post:
+      summary: MCP search wrapper
+      description: MCP-compatible wrapper around /search. Requires the X-API-Key header.
+      operationId: mcpSearch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - APIKeyHeader: []
+  /mcp/analyze:
+    post:
+      summary: MCP analyze wrapper
+      description: MCP-compatible wrapper around /analyze. Requires the X-API-Key
+        header.
+      operationId: mcpAnalyze
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalysisRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - APIKeyHeader: []
+  /mcp/briefing:
+    post:
+      summary: MCP briefing wrapper
+      description: MCP-compatible wrapper around /agent/briefing. Requires the X-API-Key
+        header.
+      operationId: mcpBriefing
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentBriefingRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentBriefingResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - APIKeyHeader: []
   /report/daily:
     post:
       summary: Generate a daily monitoring report
@@ -602,6 +736,19 @@ components:
         output_language:
           type: string
           title: Output Language
+          default: auto
+        use_ai:
+          type: boolean
+          title: Use Ai
+          default: false
+        ai_provider:
+          type: string
+          enum:
+          - auto
+          - gemini
+          - openai
+          - none
+          title: Ai Provider
           default: auto
       type: object
       required:
@@ -877,6 +1024,19 @@ components:
           type: string
           title: Output Language
           default: auto
+        use_ai:
+          type: boolean
+          title: Use Ai
+          default: false
+        ai_provider:
+          type: string
+          enum:
+          - auto
+          - gemini
+          - openai
+          - none
+          title: Ai Provider
+          default: auto
       type: object
       required:
       - goal
@@ -1049,6 +1209,22 @@ components:
           type: string
           title: Output Language
           description: auto, English, Chinese, or a language code.
+          default: auto
+        use_ai:
+          type: boolean
+          title: Use Ai
+          description: When true, optionally enhance deterministic analysis with a
+            configured AI provider.
+          default: false
+        ai_provider:
+          type: string
+          enum:
+          - auto
+          - gemini
+          - openai
+          - none
+          title: Ai Provider
+          description: 'AI provider preference: auto, gemini, openai, or none.'
           default: auto
       type: object
       title: AnalysisRequest
@@ -1401,6 +1577,29 @@ components:
       - status
       - service
       title: HealthResponse
+    MCPManifestResponse:
+      properties:
+        name:
+          type: string
+          title: Name
+        version:
+          type: string
+          title: Version
+        description:
+          type: string
+          title: Description
+        tools:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Tools
+      type: object
+      required:
+      - name
+      - version
+      - description
+      title: MCPManifestResponse
     Monitor:
       properties:
         name:
@@ -1763,6 +1962,156 @@ components:
       - opportunity
       - explanation
       title: OpportunityItem
+    ReportExportRequest:
+      properties:
+        query:
+          anyOf:
+          - type: string
+            maxLength: 500
+            minLength: 1
+          - type: 'null'
+          title: Query
+          description: Natural language public information search request. Provide
+            either query or queries.
+          examples:
+          - Find recent Reddit discussions and Google News articles about AI search
+            tools.
+        queries:
+          items:
+            type: string
+          type: array
+          title: Queries
+          description: Batch search queries. If provided, every query is searched
+            and results are merged.
+          examples:
+          - - AI video tools
+            - AI agent tools
+            - TikTok Shop Thailand pet products
+        sources:
+          items:
+            type: string
+            enum:
+            - youtube
+            - x
+            - tiktok
+            - reddit
+            - google_news
+            - web
+            - manual_csv
+          type: array
+          title: Sources
+          description: Sources to search. Defaults to Google News and general web
+            search.
+          default:
+          - google_news
+          - web
+          examples:
+          - - google_news
+            - web
+        days:
+          type: integer
+          maximum: 365.0
+          minimum: 1.0
+          title: Days
+          description: Search recency window in days.
+          default: 30
+        limit:
+          type: integer
+          maximum: 100.0
+          minimum: 1.0
+          title: Limit
+          description: Maximum number of results to return.
+          default: 10
+        language:
+          type: string
+          maxLength: 20
+          minLength: 2
+          title: Language
+          description: Language code or 'any'.
+          default: any
+        country:
+          type: string
+          maxLength: 20
+          minLength: 2
+          title: Country
+          description: Country/region code or 'any'.
+          default: any
+        export_csv:
+          type: boolean
+          title: Export Csv
+          description: When true, also write a CSV report under reports/.
+          default: false
+        export_markdown:
+          type: boolean
+          title: Export Markdown
+          description: When true, also write a Markdown report under reports/.
+          default: false
+        analysis_type:
+          type: string
+          enum:
+          - general
+          - trend
+          - market
+          - competitor
+          - customer_feedback
+          - risk
+          - opportunity
+          title: Analysis Type
+          default: general
+        output_language:
+          type: string
+          title: Output Language
+          description: auto, English, Chinese, or a language code.
+          default: auto
+        use_ai:
+          type: boolean
+          title: Use Ai
+          description: When true, optionally enhance deterministic analysis with a
+            configured AI provider.
+          default: false
+        ai_provider:
+          type: string
+          enum:
+          - auto
+          - gemini
+          - openai
+          - none
+          title: Ai Provider
+          description: 'AI provider preference: auto, gemini, openai, or none.'
+          default: auto
+        format:
+          type: string
+          enum:
+          - markdown
+          - html
+          - json
+          - pdf
+          title: Format
+          default: html
+      type: object
+      title: ReportExportRequest
+    ReportExportResponse:
+      properties:
+        format:
+          type: string
+          title: Format
+        export_path:
+          type: string
+          title: Export Path
+        download_url:
+          type: string
+          title: Download Url
+          default: ''
+        warnings:
+          items:
+            type: string
+          type: array
+          title: Warnings
+      type: object
+      required:
+      - format
+      - export_path
+      title: ReportExportResponse
     ReportResponse:
       properties:
         query:

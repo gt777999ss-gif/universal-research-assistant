@@ -21,6 +21,7 @@ env/
 reports/
 data/monitors/*.json
 data/history/*.json
+data/alerts/*.json
 data/manual_imports/*.csv
 
 # Local/editor files

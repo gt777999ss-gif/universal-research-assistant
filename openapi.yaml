@@ -5,7 +5,7 @@ info:
     public sources, filters spam and duplicates, ranks relevant results, and returns
     clean JSON. It does not recommend products, suppliers, purchases, or sales strategies
     unless explicitly asked.
-  version: 8.0.0
+  version: 9.0.0
 servers:
 - url: https://universal-research-assistant.onrender.com
   description: Production server
@@ -187,6 +187,110 @@ paths:
               schema:
                 $ref: '#/components/schemas/MCPManifestResponse'
       security: []
+  /monitors:
+    get:
+      summary: List monitor jobs
+      description: Lists saved monitor jobs for the monitoring center. Requires the
+        X-API-Key header.
+      operationId: listEnterpriseMonitors
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonitorListResponse'
+      security:
+      - APIKeyHeader: []
+    post:
+      summary: Create a monitor job
+      description: Creates a saved monitor job with optional saved searches and alert
+        rules. Requires the X-API-Key header.
+      operationId: createEnterpriseMonitor
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MonitorConfig'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Monitor'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - APIKeyHeader: []
+  /monitors/{id}:
+    put:
+      summary: Edit, enable, or disable a monitor job
+      description: Updates monitor configuration. Set enabled true or false to enable/disable
+        jobs. Requires the X-API-Key header.
+      operationId: updateEnterpriseMonitor
+      security:
+      - APIKeyHeader: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MonitorUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Monitor'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      summary: Delete a monitor job
+      description: Deletes one monitor job. Requires the X-API-Key header.
+      operationId: deleteEnterpriseMonitor
+      security:
+      - APIKeyHeader: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: boolean
+                title: Response Deleteenterprisemonitor
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /monitor/create:
     post:
       summary: Create a public information monitor
@@ -310,6 +414,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - APIKeyHeader: []
+  /alerts:
+    get:
+      summary: List recent alerts
+      description: Lists locally stored alert events. Requires the X-API-Key header.
+      operationId: listAlerts
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertsResponse'
+      security:
+      - APIKeyHeader: []
+  /scheduler:
+    get:
+      summary: Get scheduler status
+      description: Returns in-process scheduler status and supported frequencies.
+        Requires the X-API-Key header.
+      operationId: getSchedulerStatus
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchedulerResponse'
       security:
       - APIKeyHeader: []
   /dashboard:
@@ -831,6 +964,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - rss
             - web
             - manual_csv
           type: array
@@ -919,6 +1053,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - rss
             - web
             - manual_csv
           type: array
@@ -999,6 +1134,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - rss
             - web
             - manual_csv
           type: array
@@ -1100,6 +1236,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - rss
             - web
             - manual_csv
           type: array
@@ -1220,6 +1357,52 @@ components:
       - plan
       - executive_summary
       title: AgentRunResponse
+    AlertItem:
+      properties:
+        created_at:
+          type: string
+          title: Created At
+          default: ''
+        monitor_id:
+          type: string
+          title: Monitor Id
+          default: ''
+        monitor_name:
+          type: string
+          title: Monitor Name
+          default: ''
+        rule:
+          type: string
+          title: Rule
+          default: ''
+        message:
+          type: string
+          title: Message
+          default: ''
+        severity:
+          type: string
+          title: Severity
+          default: info
+        evidence:
+          items:
+            type: string
+          type: array
+          title: Evidence
+        path:
+          type: string
+          title: Path
+          default: ''
+      type: object
+      title: AlertItem
+    AlertsResponse:
+      properties:
+        alerts:
+          items:
+            $ref: '#/components/schemas/AlertItem'
+          type: array
+          title: Alerts
+      type: object
+      title: AlertsResponse
     AnalysisRequest:
       properties:
         query:
@@ -1254,6 +1437,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - rss
             - web
             - manual_csv
           type: array
@@ -1475,6 +1659,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - rss
             - web
             - manual_csv
           type: array
@@ -1629,6 +1814,16 @@ components:
             type: object
           type: array
           title: Recent Reports
+        recent_alerts:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Recent Alerts
+        scheduler_status:
+          additionalProperties: true
+          type: object
+          title: Scheduler Status
         warnings:
           items:
             type: string
@@ -1736,6 +1931,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - rss
             - web
             - manual_csv
           type: array
@@ -1800,6 +1996,15 @@ components:
           type: boolean
           title: Export Csv
           default: false
+        saved_searches:
+          items:
+            type: string
+          type: array
+          title: Saved Searches
+        alert_rules:
+          additionalProperties: true
+          type: object
+          title: Alert Rules
         id:
           type: string
           title: Id
@@ -1860,6 +2065,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - rss
             - web
             - manual_csv
           type: array
@@ -1924,6 +2130,15 @@ components:
           type: boolean
           title: Export Csv
           default: false
+        saved_searches:
+          items:
+            type: string
+          type: array
+          title: Saved Searches
+        alert_rules:
+          additionalProperties: true
+          type: object
+          title: Alert Rules
       type: object
       required:
       - name
@@ -1976,6 +2191,113 @@ components:
       required:
       - ran
       title: MonitorRunResponse
+    MonitorUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 120
+            minLength: 1
+          - type: 'null'
+          title: Name
+        query:
+          anyOf:
+          - type: string
+            maxLength: 500
+            minLength: 1
+          - type: 'null'
+          title: Query
+        sources:
+          anyOf:
+          - items:
+              type: string
+              enum:
+              - youtube
+              - x
+              - tiktok
+              - reddit
+              - google_news
+              - rss
+              - web
+              - manual_csv
+            type: array
+          - type: 'null'
+          title: Sources
+        analysis_type:
+          anyOf:
+          - type: string
+            enum:
+            - general
+            - trend
+            - market
+            - competitor
+            - customer_feedback
+            - risk
+            - opportunity
+          - type: 'null'
+          title: Analysis Type
+        frequency:
+          anyOf:
+          - type: string
+            enum:
+            - hourly
+            - daily
+            - weekly
+          - type: 'null'
+          title: Frequency
+        days:
+          anyOf:
+          - type: integer
+            maximum: 365.0
+            minimum: 1.0
+          - type: 'null'
+          title: Days
+        limit:
+          anyOf:
+          - type: integer
+            maximum: 100.0
+            minimum: 1.0
+          - type: 'null'
+          title: Limit
+        language:
+          anyOf:
+          - type: string
+            maxLength: 20
+            minLength: 2
+          - type: 'null'
+          title: Language
+        country:
+          anyOf:
+          - type: string
+            maxLength: 20
+            minLength: 2
+          - type: 'null'
+          title: Country
+        enabled:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Enabled
+        export_csv:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Export Csv
+        saved_searches:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Saved Searches
+        alert_rules:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Alert Rules
+      type: object
+      title: MonitorUpdate
     MonitoringReportResponse:
       properties:
         report_type:
@@ -2107,6 +2429,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - rss
             - web
             - manual_csv
           type: array
@@ -2328,6 +2651,37 @@ components:
       - risk
       - explanation
       title: RiskItem
+    SchedulerResponse:
+      properties:
+        running:
+          type: boolean
+          title: Running
+        interval_seconds:
+          type: integer
+          title: Interval Seconds
+        supported_frequencies:
+          items:
+            type: string
+          type: array
+          title: Supported Frequencies
+        enabled_monitors:
+          type: integer
+          title: Enabled Monitors
+          default: 0
+        due_monitors:
+          type: integer
+          title: Due Monitors
+          default: 0
+        last_warnings:
+          items:
+            type: string
+          type: array
+          title: Last Warnings
+      type: object
+      required:
+      - running
+      - interval_seconds
+      title: SchedulerResponse
     SearchRequest:
       properties:
         query:
@@ -2362,6 +2716,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - rss
             - web
             - manual_csv
           type: array
@@ -2579,6 +2934,7 @@ components:
           - tiktok
           - reddit
           - google_news
+          - rss
           - web
           - manual_csv
           title: Name
@@ -2639,6 +2995,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - rss
             - web
             - manual_csv
           type: array

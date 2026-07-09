@@ -36,7 +36,9 @@ from models import SearchResult
 from monitoring.store import (
     create_monitor,
     delete_monitor,
+    enabled_due_monitors,
     get_monitor,
+    list_alerts,
     list_report_dates,
     list_monitors,
     load_report_json,
@@ -44,6 +46,9 @@ from monitoring.store import (
     reports_for_date,
     save_history,
     save_report_files,
+    save_alert,
+    save_monitor,
+    update_monitor,
     update_monitor_after_run,
 )
 from notifications.notifier import send_test_notification
@@ -55,14 +60,14 @@ from processors.summarizer import summarize_results
 from scheduler.scheduler import MonitorScheduler
 
 
-SourceName = Literal["youtube", "x", "tiktok", "reddit", "google_news", "web", "manual_csv"]
+SourceName = Literal["youtube", "x", "tiktok", "reddit", "google_news", "rss", "web", "manual_csv"]
 AnalysisType = Literal["general", "trend", "market", "competitor", "customer_feedback", "risk", "opportunity"]
 MonitorFrequency = Literal["hourly", "daily", "weekly"]
 NotificationChannel = Literal["email", "telegram", "discord", "webhook"]
 AIProviderName = Literal["auto", "gemini", "openai", "none"]
 ReportExportFormat = Literal["markdown", "html", "json", "pdf"]
 DEFAULT_SOURCES: List[SourceName] = ["google_news", "web"]
-ALL_SOURCES: List[SourceName] = ["google_news", "reddit", "youtube", "x", "tiktok", "web", "manual_csv"]
+ALL_SOURCES: List[SourceName] = ["google_news", "reddit", "youtube", "x", "tiktok", "rss", "web", "manual_csv"]
 
 
 class HealthResponse(BaseModel):
@@ -243,6 +248,24 @@ class MonitorConfig(BaseModel):
     country: str = Field(default="any", min_length=2, max_length=20)
     enabled: bool = True
     export_csv: bool = False
+    saved_searches: List[str] = Field(default_factory=list)
+    alert_rules: Dict[str, Any] = Field(default_factory=dict)
+
+
+class MonitorUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    query: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    sources: Optional[List[SourceName]] = None
+    analysis_type: Optional[AnalysisType] = None
+    frequency: Optional[MonitorFrequency] = None
+    days: Optional[int] = Field(default=None, ge=1, le=365)
+    limit: Optional[int] = Field(default=None, ge=1, le=100)
+    language: Optional[str] = Field(default=None, min_length=2, max_length=20)
+    country: Optional[str] = Field(default=None, min_length=2, max_length=20)
+    enabled: Optional[bool] = None
+    export_csv: Optional[bool] = None
+    saved_searches: Optional[List[str]] = None
+    alert_rules: Optional[Dict[str, Any]] = None
 
 
 class Monitor(MonitorConfig):
@@ -268,6 +291,30 @@ class MonitorRunResponse(BaseModel):
     ran: int
     results: List[Dict[str, Any]] = Field(default_factory=list)
     warnings: List[str] = Field(default_factory=list)
+
+
+class AlertItem(BaseModel):
+    created_at: str = ""
+    monitor_id: str = ""
+    monitor_name: str = ""
+    rule: str = ""
+    message: str = ""
+    severity: str = "info"
+    evidence: List[str] = Field(default_factory=list)
+    path: str = ""
+
+
+class AlertsResponse(BaseModel):
+    alerts: List[AlertItem] = Field(default_factory=list)
+
+
+class SchedulerResponse(BaseModel):
+    running: bool
+    interval_seconds: int
+    supported_frequencies: List[str] = Field(default_factory=list)
+    enabled_monitors: int = 0
+    due_monitors: int = 0
+    last_warnings: List[str] = Field(default_factory=list)
 
 
 class MonitoringReportResponse(BaseModel):
@@ -315,6 +362,8 @@ class DashboardResponse(BaseModel):
     last_run: Optional[str] = None
     next_run: Optional[str] = None
     recent_reports: List[Dict[str, Any]] = Field(default_factory=list)
+    recent_alerts: List[Dict[str, Any]] = Field(default_factory=list)
+    scheduler_status: Dict[str, Any] = Field(default_factory=dict)
     warnings: List[str] = Field(default_factory=list)
 
 
@@ -689,6 +738,63 @@ async def mcp_manifest() -> MCPManifestResponse:
     )
 
 
+@app.get(
+    "/monitors",
+    response_model=MonitorListResponse,
+    operation_id="listEnterpriseMonitors",
+    summary="List monitor jobs",
+    description="Lists saved monitor jobs for the monitoring center. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def monitors_list() -> MonitorListResponse:
+    return MonitorListResponse(monitors=[Monitor(**item) for item in list_monitors()])
+
+
+@app.post(
+    "/monitors",
+    response_model=Monitor,
+    operation_id="createEnterpriseMonitor",
+    summary="Create a monitor job",
+    description="Creates a saved monitor job with optional saved searches and alert rules. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def monitors_create(config: MonitorConfig) -> Monitor:
+    payload = config.model_dump()
+    if not payload.get("saved_searches"):
+        payload["saved_searches"] = [config.query]
+    return Monitor(**create_monitor(payload))
+
+
+@app.put(
+    "/monitors/{id}",
+    response_model=Monitor,
+    operation_id="updateEnterpriseMonitor",
+    summary="Edit, enable, or disable a monitor job",
+    description="Updates monitor configuration. Set enabled true or false to enable/disable jobs. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def monitors_update(id: str, update: MonitorUpdate) -> Monitor:
+    monitor = update_monitor(id, update.model_dump(exclude_unset=True))
+    if not monitor:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Monitor not found.")
+    return Monitor(**monitor)
+
+
+@app.delete(
+    "/monitors/{id}",
+    response_model=Dict[str, bool],
+    operation_id="deleteEnterpriseMonitor",
+    summary="Delete a monitor job",
+    description="Deletes one monitor job. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def monitors_delete(id: str) -> Dict[str, bool]:
+    deleted = delete_monitor(id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Monitor not found.")
+    return {"deleted": True}
+
+
 @app.post(
     "/monitor/create",
     response_model=Monitor,
@@ -768,6 +874,30 @@ async def monitor_run(request: MonitorRunRequest = MonitorRunRequest()) -> Monit
 
 
 @app.get(
+    "/alerts",
+    response_model=AlertsResponse,
+    operation_id="listAlerts",
+    summary="List recent alerts",
+    description="Lists locally stored alert events. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def alerts() -> AlertsResponse:
+    return AlertsResponse(alerts=[AlertItem(**item) for item in list_alerts()])
+
+
+@app.get(
+    "/scheduler",
+    response_model=SchedulerResponse,
+    operation_id="getSchedulerStatus",
+    summary="Get scheduler status",
+    description="Returns in-process scheduler status and supported frequencies. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def scheduler_status() -> SchedulerResponse:
+    return SchedulerResponse(**scheduler_status_payload())
+
+
+@app.get(
     "/dashboard",
     response_model=DashboardResponse,
     operation_id="getMonitoringDashboard",
@@ -787,6 +917,8 @@ async def dashboard() -> DashboardResponse:
         last_run=last_run,
         next_run=next_run,
         recent_reports=recent_reports(),
+        recent_alerts=list_alerts(10),
+        scheduler_status=scheduler_status_payload(),
         warnings=unique_strings(warnings),
     )
 
@@ -1222,6 +1354,7 @@ async def run_monitor_job(monitor: Dict[str, Any]) -> Dict[str, Any]:
         "warnings": report_response.warnings,
     }
     history_path = save_history(monitor["id"], history)
+    alert_paths = evaluate_alert_rules(monitor, report_response.json_report)
     updated = update_monitor_after_run(monitor, "ok", len(report_response.warnings))
     return {
         "monitor_id": monitor["id"],
@@ -1229,6 +1362,7 @@ async def run_monitor_job(monitor: Dict[str, Any]) -> Dict[str, Any]:
         "status": "ok",
         "history_path": history_path,
         "export_paths": report_response.export_paths,
+        "alert_paths": alert_paths,
         "next_run": updated.get("next_run"),
         "warnings": report_response.warnings,
     }
@@ -1364,11 +1498,14 @@ def build_ui_page(title: str, sections: List[str]) -> str:
 def dashboard_sections() -> List[str]:
     reports = recent_reports(8)
     monitors = list_monitors()
+    alerts_data = list_alerts(8)
     sections = [
-        "<section><h2>Service Status</h2><p class='ok'>ok</p><p class='muted'>Universal Research Assistant V8 Reporting Dashboard</p><p><a class='button' href='/ui/status'>View status</a><a class='button' href='/ui/reports'>Browse reports</a><a class='button' href='/ui/monitors'>View monitors</a></p></section>",
+        "<section><h2>Service Status</h2><p class='ok'>ok</p><p class='muted'>Universal Research Assistant V9 Enterprise Automation Platform</p><p><a class='button' href='/ui/status'>View status</a><a class='button' href='/ui/reports'>Browse reports</a><a class='button' href='/ui/monitors'>View monitors</a></p></section>",
         source_status_table(),
         report_table(reports, "Recent Reports"),
         monitor_table(monitors[:10], "Monitors"),
+        alert_table(alerts_data, "Recent Alerts"),
+        scheduler_table(),
         "<section><h2>Quick API Links</h2><p><a class='button' href='/health'>Health JSON</a><a class='button' href='/sources'>Sources JSON</a><a class='button' href='/reports'>Reports JSON</a><a class='button' href='/mcp/manifest'>MCP Manifest</a></p></section>",
     ]
     return sections
@@ -1376,7 +1513,8 @@ def dashboard_sections() -> List[str]:
 
 def status_sections() -> List[str]:
     return [
-        "<section><h2>Service</h2><table><tr><th>Status</th><td class='ok'>ok</td></tr><tr><th>Version</th><td>8.0.0</td></tr><tr><th>AI</th><td>optional; deterministic fallback enabled</td></tr></table></section>",
+        "<section><h2>Service</h2><table><tr><th>Status</th><td class='ok'>ok</td></tr><tr><th>Version</th><td>9.0.0</td></tr><tr><th>AI</th><td>optional; deterministic fallback enabled</td></tr></table></section>",
+        scheduler_table(),
         source_status_table(),
     ]
 
@@ -1417,6 +1555,73 @@ def monitor_table(monitors: List[Dict[str, Any]], title: str) -> str:
         for monitor in monitors
     )
     return f"<section><h2>{title}</h2><table><tr><th>Name</th><th>Query</th><th>Enabled</th><th>Frequency</th><th>Last Run</th><th>Next Run</th></tr>{rows}</table></section>"
+
+
+def alert_table(alerts_data: List[Dict[str, Any]], title: str) -> str:
+    if not alerts_data:
+        return f"<section><h2>{title}</h2><p class='muted'>No alerts found.</p></section>"
+    rows = "".join(
+        f"<tr><td>{item.get('created_at','')}</td><td>{item.get('monitor_name','')}</td><td>{item.get('rule','')}</td><td>{item.get('severity','')}</td><td>{item.get('message','')}</td></tr>"
+        for item in alerts_data
+    )
+    return f"<section><h2>{title}</h2><table><tr><th>Created</th><th>Monitor</th><th>Rule</th><th>Severity</th><th>Message</th></tr>{rows}</table></section>"
+
+
+def scheduler_table() -> str:
+    payload = scheduler_status_payload()
+    rows = "".join(f"<tr><th>{key}</th><td>{value}</td></tr>" for key, value in payload.items() if key != "last_warnings")
+    return f"<section><h2>Scheduler</h2><table>{rows}</table></section>"
+
+
+def scheduler_status_payload() -> Dict[str, Any]:
+    return {
+        "running": bool(scheduler_instance and scheduler_instance.running),
+        "interval_seconds": scheduler_instance.interval_seconds if scheduler_instance else 0,
+        "supported_frequencies": ["hourly", "daily", "weekly"],
+        "enabled_monitors": len([monitor for monitor in list_monitors() if monitor.get("enabled", True)]),
+        "due_monitors": len(enabled_due_monitors()),
+        "last_warnings": scheduler_instance.last_warnings[-10:] if scheduler_instance else [],
+    }
+
+
+def evaluate_alert_rules(monitor: Dict[str, Any], report: Dict[str, Any]) -> List[str]:
+    rules = monitor.get("alert_rules") or {}
+    if not rules:
+        return []
+    text = " ".join(
+        [
+            report.get("executive_summary", ""),
+            " ".join(item.get("title", "") for item in report.get("most_discussed_topics", [])),
+            " ".join(item.get("title", "") for item in report.get("top_stories", [])),
+        ]
+    ).lower()
+    alert_paths: List[str] = []
+    checks = {
+        "new_keyword": rules.get("new_keyword") or rules.get("keywords") or [],
+        "competitor_mentioned": rules.get("competitor_mentioned") or rules.get("competitors") or [],
+    }
+    for rule, terms in checks.items():
+        for term in terms if isinstance(terms, list) else [terms]:
+            if term and str(term).lower() in text:
+                alert_paths.append(save_alert(build_alert(monitor, rule, f"Matched '{term}'.", [str(term)])))
+    if rules.get("trend_spike") and len(report.get("emerging_trends", [])) >= int(rules.get("trend_spike_threshold", 3)):
+        evidence = [item.get("trend", "") for item in report.get("emerging_trends", [])[:5]]
+        alert_paths.append(save_alert(build_alert(monitor, "trend_spike", "Trend signal threshold was reached.", evidence, "warning")))
+    if rules.get("source_updated") and report.get("top_stories"):
+        evidence = [item.get("url", "") for item in report.get("top_stories", [])[:5]]
+        alert_paths.append(save_alert(build_alert(monitor, "source_updated", "New source results were collected.", evidence)))
+    return alert_paths
+
+
+def build_alert(monitor: Dict[str, Any], rule: str, message: str, evidence: List[str], severity: str = "info") -> Dict[str, Any]:
+    return {
+        "monitor_id": monitor.get("id", ""),
+        "monitor_name": monitor.get("name", ""),
+        "rule": rule,
+        "message": message,
+        "severity": severity,
+        "evidence": evidence,
+    }
 
 
 async def maybe_enhance_analysis(
@@ -1584,6 +1789,14 @@ def source_status(source: SourceName) -> SourceStatus:
             requires_api_key=False,
             configured=False,
             note="No legal public TikTok search provider is configured; collector returns warnings only.",
+        )
+    if source == "rss":
+        return SourceStatus(
+            name=source,
+            available=True,
+            requires_api_key=False,
+            configured=True,
+            note="Collects public RSS feed URLs when the query is an RSS URL.",
         )
     return SourceStatus(name=source, available=True, requires_api_key=False, configured=True)
 

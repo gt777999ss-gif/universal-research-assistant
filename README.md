@@ -1,6 +1,6 @@
-# Universal AI-Powered Public Information Research Assistant V8 Reporting Dashboard
+# Universal AI-Powered Public Information Research Assistant V9 Enterprise Automation Platform
 
-FastAPI backend for public information research, deterministic reporting, optional AI-enhanced analysis, monitoring, autonomous research workflows, downloadable report exports, HTML dashboard pages, and MCP-compatible wrappers. It is useful without Gemini or OpenAI: if AI keys are missing or invalid, the system falls back to deterministic analysis and still generates reports.
+FastAPI backend for public information research, deterministic reporting, optional AI-enhanced analysis, monitoring automation, alert rules, scheduler status, downloadable report exports, HTML dashboard pages, and MCP-compatible wrappers. It is useful without Gemini or OpenAI: if AI keys are missing or invalid, the system falls back to deterministic analysis and still generates reports.
 
 This is not an e-commerce recommendation system. By default it does not recommend products, suppliers, purchases, or selling strategies.
 
@@ -13,7 +13,7 @@ This is not an e-commerce recommendation system. By default it does not recommen
 - Use X/Twitter only through the official X API when `X_BEARER_TOKEN` is configured.
 - Do not login-scrape TikTok. Use manual CSV imports, licensed providers, or supported public data sources only.
 
-## V8 Reporting Dashboard Features
+## V9 Enterprise Automation Platform Features
 
 - Single-query and batch-query public information search.
 - Source availability reporting through `GET /sources`.
@@ -52,8 +52,16 @@ This is not an e-commerce recommendation system. By default it does not recommen
 - Deterministic reports include executive summary, top stories, trend signals, risks, opportunities, and recommended follow-up queries.
 - MCP-compatible endpoints: `GET /mcp/manifest`, `POST /mcp/search`, `POST /mcp/analyze`, and `POST /mcp/briefing`.
 - Webhook notification test support with `WEBHOOK_URL` when configured.
+- Monitoring Center API through `GET /monitors`, `POST /monitors`, `PUT /monitors/{id}`, and `DELETE /monitors/{id}`.
+- Monitor jobs can be created, edited, deleted, enabled, and disabled.
+- Scheduler supports hourly, daily, and weekly frequencies.
+- Monitor targets include Google News, Reddit, YouTube, RSS, and web pages when the relevant collectors are configured.
+- Saved searches are stored inside monitor definitions.
+- Alert rules support new keywords, trend spikes, source updates, and competitor mentions.
+- Recent alerts are available through `GET /alerts`.
+- Scheduler state is available through `GET /scheduler`.
 
-## V8 Source Coverage
+## V9 Source Coverage
 
 Each source has its own collector module and returns a common `SearchResult` model. If one source is unavailable or not configured, the API continues searching the remaining sources.
 
@@ -64,6 +72,7 @@ Each source has its own collector module and returns a common `SearchResult` mod
 | `youtube` | `collectors/youtube_collector.py` | Uses the official YouTube Data API when `YOUTUBE_API_KEY` is configured. |
 | `x` | `collectors/x_collector.py` | Uses the official X API when `X_BEARER_TOKEN` is configured. |
 | `tiktok` | `collectors/tiktok_public_collector.py` | Placeholder for public/official/licensed TikTok data only; no login scraping. |
+| `rss` | `collectors/rss_collector.py` | Uses public RSS feed URLs. |
 | `web` | `collectors/web_search_collector.py` | Uses Bing Web Search when `BING_SEARCH_API_KEY` is configured. |
 | `manual_csv` | `collectors/manual_csv_collector.py` | Optional public-data CSV import. |
 
@@ -71,7 +80,7 @@ Results are merged, filtered for spam/ads/irrelevance, deduplicated by URL and s
 
 ## Analyzer Modules
 
-V8 analysis and agent planning remain deterministic by default. AI enhancement is optional and only runs when `use_ai: true` and a configured provider key is available. Missing or invalid AI keys never block report generation.
+V9 analysis and agent planning remain deterministic by default. AI enhancement is optional and only runs when `use_ai: true` and a configured provider key is available. Missing or invalid AI keys never block report generation.
 
 ```text
 analyzers/
@@ -468,6 +477,57 @@ curl -X POST http://127.0.0.1:8000/monitor/run \
   -H "X-API-Key: local-dev-secret" \
   -d '{"force": true}'
 ```
+
+`GET /monitors`
+
+- Requires `X-API-Key`.
+- Lists monitor jobs for the Monitoring Center.
+
+`POST /monitors`
+
+- Requires `X-API-Key`.
+- Creates a monitor job with saved searches and optional alert rules.
+
+Example:
+
+```json
+{
+  "name": "AI Video Monitor",
+  "query": "AI video tools",
+  "sources": ["google_news", "reddit", "youtube", "web"],
+  "frequency": "daily",
+  "enabled": true,
+  "saved_searches": ["AI video tools", "Runway updates"],
+  "alert_rules": {
+    "new_keyword": ["launch", "funding"],
+    "competitor_mentioned": ["Runway", "Pika"],
+    "trend_spike": true,
+    "trend_spike_threshold": 3,
+    "source_updated": true
+  }
+}
+```
+
+`PUT /monitors/{id}`
+
+- Requires `X-API-Key`.
+- Edits a monitor job.
+- Set `"enabled": false` to disable a job or `"enabled": true` to enable it.
+
+`DELETE /monitors/{id}`
+
+- Requires `X-API-Key`.
+- Deletes a monitor job.
+
+`GET /alerts`
+
+- Requires `X-API-Key`.
+- Lists recent alert events stored under `data/alerts/`.
+
+`GET /scheduler`
+
+- Requires `X-API-Key`.
+- Returns scheduler running state, interval, supported frequencies, enabled monitors, due monitors, and recent scheduler warnings.
 
 `POST /report/daily`
 

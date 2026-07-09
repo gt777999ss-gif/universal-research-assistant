@@ -9,6 +9,7 @@ from uuid import uuid4
 
 MONITOR_DIR = Path("data/monitors")
 HISTORY_DIR = Path("data/history")
+ALERT_DIR = Path("data/alerts")
 REPORTS_DIR = Path("reports")
 
 FREQUENCY_DELTAS = {
@@ -25,6 +26,7 @@ def utc_now() -> datetime:
 def ensure_runtime_dirs() -> None:
     MONITOR_DIR.mkdir(parents=True, exist_ok=True)
     HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+    ALERT_DIR.mkdir(parents=True, exist_ok=True)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -49,6 +51,15 @@ def save_monitor(monitor: Dict[str, Any]) -> None:
     ensure_runtime_dirs()
     monitor["updated_at"] = utc_now().isoformat() + "Z"
     (MONITOR_DIR / f"{monitor['id']}.json").write_text(json.dumps(monitor, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def update_monitor(monitor_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    monitor = get_monitor(monitor_id)
+    if not monitor:
+        return None
+    monitor.update({key: value for key, value in updates.items() if value is not None})
+    save_monitor(monitor)
+    return monitor
 
 
 def list_monitors() -> List[Dict[str, Any]]:
@@ -102,6 +113,26 @@ def save_history(monitor_id: str, record: Dict[str, Any]) -> str:
     path = HISTORY_DIR / f"{monitor_id}-{timestamp}.json"
     path.write_text(json.dumps(record, indent=2, ensure_ascii=False), encoding="utf-8")
     return str(path)
+
+
+def save_alert(alert: Dict[str, Any]) -> str:
+    ensure_runtime_dirs()
+    timestamp = utc_now().strftime("%Y%m%d-%H%M%S-%f")
+    path = ALERT_DIR / f"alert-{timestamp}.json"
+    payload = {"created_at": utc_now().isoformat() + "Z", **alert}
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    return str(path)
+
+
+def list_alerts(limit: int = 50) -> List[Dict[str, Any]]:
+    ensure_runtime_dirs()
+    files = sorted(ALERT_DIR.glob("*.json"), key=lambda path: path.stat().st_mtime, reverse=True)
+    alerts: List[Dict[str, Any]] = []
+    for path in files[:limit]:
+        item = json.loads(path.read_text(encoding="utf-8"))
+        item["path"] = str(path)
+        alerts.append(item)
+    return alerts
 
 
 def save_report_files(

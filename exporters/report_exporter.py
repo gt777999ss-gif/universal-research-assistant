@@ -29,7 +29,12 @@ def export_report(markdown: str, json_payload: Dict[str, Any], output_format: st
         warnings.append("PDF export is a placeholder; Markdown was exported because PDF dependencies are not configured.")
     else:
         raise ValueError("Unsupported export format.")
-    return {"format": output_format, "export_path": str(path), "download_url": "", "warnings": warnings}
+    return {
+        "format": output_format,
+        "export_path": str(path),
+        "download_url": f"/reports/download/{path.parent.name}/{path.name}",
+        "warnings": warnings,
+    }
 
 
 def markdown_to_html(markdown: str) -> str:

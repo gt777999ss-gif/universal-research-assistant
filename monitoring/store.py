@@ -128,15 +128,30 @@ def save_report_files(
 def recent_reports(limit: int = 10) -> List[Dict[str, Any]]:
     ensure_runtime_dirs()
     files = sorted(REPORTS_DIR.glob("*/*.*"), key=lambda path: path.stat().st_mtime, reverse=True)
-    return [
-        {
-            "path": str(path),
-            "date": path.parent.name,
-            "name": path.name,
-            "type": path.suffix.lstrip("."),
-        }
-        for path in files[:limit]
-    ]
+    return [report_file_info(path) for path in files[:limit]]
+
+
+def list_report_dates() -> List[str]:
+    ensure_runtime_dirs()
+    return sorted([path.name for path in REPORTS_DIR.iterdir() if path.is_dir()], reverse=True)
+
+
+def reports_for_date(report_date: str) -> List[Dict[str, Any]]:
+    day_dir = REPORTS_DIR / report_date
+    if not day_dir.exists() or not day_dir.is_dir():
+        return []
+    return [report_file_info(path) for path in sorted(day_dir.glob("*.*"), key=lambda item: item.stat().st_mtime, reverse=True)]
+
+
+def report_file_info(path: Path) -> Dict[str, Any]:
+    return {
+        "path": str(path),
+        "date": path.parent.name,
+        "name": path.name,
+        "type": path.suffix.lstrip("."),
+        "size_bytes": path.stat().st_size,
+        "download_url": f"/reports/download/{path.parent.name}/{path.name}",
+    }
 
 
 def load_report_json(report_date: str) -> Optional[Dict[str, Any]]:

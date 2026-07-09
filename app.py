@@ -3,11 +3,12 @@ from __future__ import annotations
 import asyncio
 import os
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import yaml
 from fastapi import Depends, FastAPI, HTTPException, Request, Security, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -36,9 +37,11 @@ from monitoring.store import (
     create_monitor,
     delete_monitor,
     get_monitor,
+    list_report_dates,
     list_monitors,
     load_report_json,
     recent_reports,
+    reports_for_date,
     save_history,
     save_report_files,
     update_monitor_after_run,
@@ -433,6 +436,25 @@ class ReportExportResponse(BaseModel):
     warnings: List[str] = Field(default_factory=list)
 
 
+class ReportFileItem(BaseModel):
+    path: str
+    date: str
+    name: str
+    type: str
+    size_bytes: int = 0
+    download_url: str = ""
+
+
+class ReportsIndexResponse(BaseModel):
+    dates: List[str] = Field(default_factory=list)
+    recent_reports: List[ReportFileItem] = Field(default_factory=list)
+
+
+class ReportsByDateResponse(BaseModel):
+    date: str
+    reports: List[ReportFileItem] = Field(default_factory=list)
+
+
 class MCPManifestResponse(BaseModel):
     name: str
     version: str
@@ -556,6 +578,49 @@ async def sources() -> SourcesResponse:
 
 
 @app.get(
+    "/reports",
+    response_model=ReportsIndexResponse,
+    operation_id="listReports",
+    summary="List report history",
+    description="Public endpoint listing report dates and recent report files.",
+    openapi_extra={"security": []},
+)
+async def reports_index() -> ReportsIndexResponse:
+    return ReportsIndexResponse(
+        dates=list_report_dates(),
+        recent_reports=[ReportFileItem(**item) for item in recent_reports(50)],
+    )
+
+
+@app.get(
+    "/reports/{date}",
+    response_model=ReportsByDateResponse,
+    operation_id="listReportsByDate",
+    summary="List reports for a date",
+    description="Public endpoint listing Markdown, HTML, and JSON reports for one date.",
+    openapi_extra={"security": []},
+)
+async def reports_by_date(date: str) -> ReportsByDateResponse:
+    return ReportsByDateResponse(date=date, reports=[ReportFileItem(**item) for item in reports_for_date(date)])
+
+
+@app.get(
+    "/reports/download/{date}/{filename}",
+    operation_id="downloadReportFile",
+    summary="Download a report file",
+    description="Public report download endpoint for files under reports/YYYY-MM-DD/.",
+    openapi_extra={"security": []},
+)
+async def download_report_file(date: str, filename: str) -> FileResponse:
+    if "/" in date or "/" in filename or ".." in date or ".." in filename:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid report path.")
+    path = Path("reports") / date / filename
+    if not path.exists() or not path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report file not found.")
+    return FileResponse(path)
+
+
+@app.get(
     "/ui",
     response_class=HTMLResponse,
     operation_id="getUIDashboard",
@@ -564,23 +629,43 @@ async def sources() -> SourcesResponse:
     openapi_extra={"security": []},
 )
 async def ui_dashboard() -> HTMLResponse:
-    monitor_items = list_monitors()
-    source_items = [source_status(source).model_dump() for source in ALL_SOURCES]
-    html = ["<!doctype html><html><head><meta charset='utf-8'><title>Universal Research Assistant</title>"]
-    html.append("<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:40px;line-height:1.5;color:#111827}table{border-collapse:collapse;width:100%;margin:16px 0}td,th{border:1px solid #d1d5db;padding:8px;text-align:left}a{color:#2563eb}</style></head><body>")
-    html.append("<h1>Universal Research Assistant</h1><p>Status: <strong>ok</strong></p>")
-    html.append("<h2>Available Sources</h2><table><tr><th>Source</th><th>Available</th><th>Configured</th><th>Note</th></tr>")
-    for item in source_items:
-        html.append(f"<tr><td>{item['name']}</td><td>{item['available']}</td><td>{item['configured']}</td><td>{item.get('note','')}</td></tr>")
-    html.append("</table><h2>Monitors</h2><table><tr><th>Name</th><th>Enabled</th><th>Last Run</th><th>Next Run</th></tr>")
-    for monitor in monitor_items[:20]:
-        html.append(f"<tr><td>{monitor.get('name','')}</td><td>{monitor.get('enabled')}</td><td>{monitor.get('last_run') or ''}</td><td>{monitor.get('next_run') or ''}</td></tr>")
-    html.append("</table><h2>Recent Reports</h2><ul>")
-    for report_item in recent_reports(10):
-        html.append(f"<li>{report_item.get('date','')} - {report_item.get('name','')}</li>")
-    html.append("</ul><h2>Quick Links</h2><ul><li><a href='/health'>Health</a></li><li><a href='/sources'>Sources</a></li><li><a href='/privacy'>Privacy</a></li><li><a href='/openapi.json'>OpenAPI JSON</a></li></ul>")
-    html.append("</body></html>")
-    return HTMLResponse("".join(html))
+    return HTMLResponse(build_ui_page("Dashboard", dashboard_sections()))
+
+
+@app.get(
+    "/ui/reports",
+    response_class=HTMLResponse,
+    operation_id="getUIReports",
+    summary="Report history browser",
+    description="Public HTML page for browsing local report history.",
+    openapi_extra={"security": []},
+)
+async def ui_reports() -> HTMLResponse:
+    return HTMLResponse(build_ui_page("Reports", reports_sections()))
+
+
+@app.get(
+    "/ui/monitors",
+    response_class=HTMLResponse,
+    operation_id="getUIMonitors",
+    summary="Monitor browser",
+    description="Public HTML page listing saved monitor definitions without exposing API keys.",
+    openapi_extra={"security": []},
+)
+async def ui_monitors() -> HTMLResponse:
+    return HTMLResponse(build_ui_page("Monitors", monitors_sections()))
+
+
+@app.get(
+    "/ui/status",
+    response_class=HTMLResponse,
+    operation_id="getUIStatus",
+    summary="Status page",
+    description="Public HTML page showing service and source status.",
+    openapi_extra={"security": []},
+)
+async def ui_status() -> HTMLResponse:
+    return HTMLResponse(build_ui_page("Status", status_sections()))
 
 
 @app.get(
@@ -1265,6 +1350,75 @@ def latest_report_before_today() -> Optional[Dict[str, Any]]:
     return None
 
 
+def build_ui_page(title: str, sections: List[str]) -> str:
+    style = (
+        "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:32px;line-height:1.5;color:#111827;background:#f9fafb}"
+        "main{max-width:1120px;margin:0 auto}nav a,.button{display:inline-block;margin:4px 8px 4px 0;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#2563eb;text-decoration:none}"
+        "section{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;margin:16px 0}table{border-collapse:collapse;width:100%;margin:12px 0}td,th{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left;font-size:14px}"
+        ".ok{color:#047857;font-weight:600}.warn{color:#b45309;font-weight:600}.muted{color:#6b7280}"
+    )
+    nav = "<nav><a href='/ui'>Dashboard</a><a href='/ui/status'>Status</a><a href='/ui/reports'>Reports</a><a href='/ui/monitors'>Monitors</a><a href='/openapi.json'>OpenAPI</a><a href='/privacy'>Privacy</a></nav>"
+    return f"<!doctype html><html><head><meta charset='utf-8'><title>{title} - Universal Research Assistant</title><style>{style}</style></head><body><main><h1>{title}</h1>{nav}{''.join(sections)}</main></body></html>"
+
+
+def dashboard_sections() -> List[str]:
+    reports = recent_reports(8)
+    monitors = list_monitors()
+    sections = [
+        "<section><h2>Service Status</h2><p class='ok'>ok</p><p class='muted'>Universal Research Assistant V8 Reporting Dashboard</p><p><a class='button' href='/ui/status'>View status</a><a class='button' href='/ui/reports'>Browse reports</a><a class='button' href='/ui/monitors'>View monitors</a></p></section>",
+        source_status_table(),
+        report_table(reports, "Recent Reports"),
+        monitor_table(monitors[:10], "Monitors"),
+        "<section><h2>Quick API Links</h2><p><a class='button' href='/health'>Health JSON</a><a class='button' href='/sources'>Sources JSON</a><a class='button' href='/reports'>Reports JSON</a><a class='button' href='/mcp/manifest'>MCP Manifest</a></p></section>",
+    ]
+    return sections
+
+
+def status_sections() -> List[str]:
+    return [
+        "<section><h2>Service</h2><table><tr><th>Status</th><td class='ok'>ok</td></tr><tr><th>Version</th><td>8.0.0</td></tr><tr><th>AI</th><td>optional; deterministic fallback enabled</td></tr></table></section>",
+        source_status_table(),
+    ]
+
+
+def reports_sections() -> List[str]:
+    sections = ["<section><h2>Report Dates</h2><p>" + " ".join(f"<a class='button' href='/reports/{date}'>{date}</a>" for date in list_report_dates()) + "</p></section>"]
+    sections.append(report_table(recent_reports(100), "Recent Downloadable Reports"))
+    return sections
+
+
+def monitors_sections() -> List[str]:
+    return [monitor_table(list_monitors(), "Saved Monitors")]
+
+
+def source_status_table() -> str:
+    rows = "".join(
+        f"<tr><td>{item.name}</td><td>{item.available}</td><td>{item.configured}</td><td>{item.note}</td></tr>"
+        for item in [source_status(source) for source in ALL_SOURCES]
+    )
+    return f"<section><h2>Sources</h2><table><tr><th>Source</th><th>Available</th><th>Configured</th><th>Note</th></tr>{rows}</table></section>"
+
+
+def report_table(reports: List[Dict[str, Any]], title: str) -> str:
+    if not reports:
+        return f"<section><h2>{title}</h2><p class='muted'>No reports found.</p></section>"
+    rows = "".join(
+        f"<tr><td>{item.get('date','')}</td><td>{item.get('name','')}</td><td>{item.get('type','')}</td><td>{item.get('size_bytes',0)}</td><td><a href='{item.get('download_url','#')}'>Download</a></td></tr>"
+        for item in reports
+    )
+    return f"<section><h2>{title}</h2><table><tr><th>Date</th><th>Name</th><th>Type</th><th>Bytes</th><th>Download</th></tr>{rows}</table></section>"
+
+
+def monitor_table(monitors: List[Dict[str, Any]], title: str) -> str:
+    if not monitors:
+        return f"<section><h2>{title}</h2><p class='muted'>No monitors found.</p></section>"
+    rows = "".join(
+        f"<tr><td>{monitor.get('name','')}</td><td>{monitor.get('query','')}</td><td>{monitor.get('enabled')}</td><td>{monitor.get('frequency','')}</td><td>{monitor.get('last_run') or ''}</td><td>{monitor.get('next_run') or ''}</td></tr>"
+        for monitor in monitors
+    )
+    return f"<section><h2>{title}</h2><table><tr><th>Name</th><th>Query</th><th>Enabled</th><th>Frequency</th><th>Last Run</th><th>Next Run</th></tr>{rows}</table></section>"
+
+
 async def maybe_enhance_analysis(
     analysis: AnalysisResponse,
     request: AnalysisRequest,
@@ -1373,6 +1527,8 @@ def build_analysis_response(request: AnalysisRequest, pipeline: Dict[str, Any]) 
         source_breakdown=breakdown,
         top_results=results,
     )
+    followups = recommended_followups(query_label, themes, request.analysis_type, output_language)
+    markdown_report += "\n## Recommended Follow-up Queries\n\n" + "\n".join(f"- {item}" for item in followups) + "\n"
     return AnalysisResponse(
         query=request.query or "",
         queries=request.queries,
@@ -1386,7 +1542,7 @@ def build_analysis_response(request: AnalysisRequest, pipeline: Dict[str, Any]) 
         opportunities=[OpportunityItem(**item) for item in opportunities],
         source_breakdown=[SourceBreakdownItem(**item) for item in breakdown],
         top_results=[SearchResult(**item) if isinstance(item, dict) else item for item in results[:10]],
-        recommended_follow_up_queries=recommended_followups(query_label, themes, request.analysis_type, output_language),
+        recommended_follow_up_queries=followups,
         markdown_report=markdown_report,
     )
 

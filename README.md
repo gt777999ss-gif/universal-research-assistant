@@ -1,6 +1,6 @@
-# Universal AI-Powered Public Information Research Assistant V7 Enterprise AI Platform
+# Universal AI-Powered Public Information Research Assistant V8 Reporting Dashboard
 
-FastAPI backend for public information research, optional AI-enhanced analysis, monitoring, autonomous research workflows, report exports, UI dashboard, and MCP-compatible wrappers. It searches permitted public sources, filters ads/spam/duplicates, ranks relevant results, summarizes each result, groups repeated themes, identifies trends/risks/opportunities, creates daily and weekly reports, continuously monitors public information sources, and can plan and run multi-step research investigations.
+FastAPI backend for public information research, deterministic reporting, optional AI-enhanced analysis, monitoring, autonomous research workflows, downloadable report exports, HTML dashboard pages, and MCP-compatible wrappers. It is useful without Gemini or OpenAI: if AI keys are missing or invalid, the system falls back to deterministic analysis and still generates reports.
 
 This is not an e-commerce recommendation system. By default it does not recommend products, suppliers, purchases, or selling strategies.
 
@@ -13,7 +13,7 @@ This is not an e-commerce recommendation system. By default it does not recommen
 - Use X/Twitter only through the official X API when `X_BEARER_TOKEN` is configured.
 - Do not login-scrape TikTok. Use manual CSV imports, licensed providers, or supported public data sources only.
 
-## V7 Enterprise AI Platform Features
+## V8 Reporting Dashboard Features
 
 - Single-query and batch-query public information search.
 - Source availability reporting through `GET /sources`.
@@ -46,10 +46,14 @@ This is not an e-commerce recommendation system. By default it does not recommen
 - AI-enhanced `/analyze`, `/report`, `/agent/run`, and `/agent/briefing` with `use_ai` and `ai_provider`.
 - Enterprise report export through `POST /report/export` for Markdown, HTML, JSON, and PDF placeholder.
 - Public HTML dashboard through `GET /ui`.
+- Public report history API through `GET /reports` and `GET /reports/{date}`.
+- Public report downloads through `/reports/download/{date}/{filename}`.
+- Public dashboard pages: `/ui`, `/ui/reports`, `/ui/monitors`, and `/ui/status`.
+- Deterministic reports include executive summary, top stories, trend signals, risks, opportunities, and recommended follow-up queries.
 - MCP-compatible endpoints: `GET /mcp/manifest`, `POST /mcp/search`, `POST /mcp/analyze`, and `POST /mcp/briefing`.
 - Webhook notification test support with `WEBHOOK_URL` when configured.
 
-## V7 Source Coverage
+## V8 Source Coverage
 
 Each source has its own collector module and returns a common `SearchResult` model. If one source is unavailable or not configured, the API continues searching the remaining sources.
 
@@ -67,7 +71,7 @@ Results are merged, filtered for spam/ads/irrelevance, deduplicated by URL and s
 
 ## Analyzer Modules
 
-V7 analysis and agent planning remain deterministic by default. AI enhancement is optional and only runs when `use_ai: true` and a configured provider key is available.
+V8 analysis and agent planning remain deterministic by default. AI enhancement is optional and only runs when `use_ai: true` and a configured provider key is available. Missing or invalid AI keys never block report generation.
 
 ```text
 analyzers/
@@ -524,11 +528,40 @@ curl -X POST http://127.0.0.1:8000/report/export \
   }'
 ```
 
+`GET /reports`
+
+- Public endpoint.
+- Lists available report dates and recent Markdown, HTML, and JSON report files.
+- Each file includes a `download_url`.
+
+`GET /reports/{date}`
+
+- Public endpoint.
+- Lists downloadable reports for one date, such as `2026-07-09`.
+
+`GET /reports/download/{date}/{filename}`
+
+- Public endpoint.
+- Downloads a report file from `reports/YYYY-MM-DD/`.
+- File names are constrained to the local reports directory.
+
 `GET /ui`
 
 - Public HTML dashboard.
 - Shows service status, available sources, monitor list, recent reports, and documentation links.
 - Does not expose API keys.
+
+`GET /ui/reports`
+
+- Public HTML report history browser with download links.
+
+`GET /ui/monitors`
+
+- Public HTML monitor overview.
+
+`GET /ui/status`
+
+- Public HTML service and source status page.
 
 `GET /mcp/manifest`
 
@@ -740,6 +773,18 @@ Open the public UI dashboard.
 
 ```text
 Use the MCP search wrapper to find recent Google News about autonomous agents.
+```
+
+```text
+Show my recent research reports and download links.
+```
+
+```text
+Export a deterministic HTML report about AI video tools without using AI.
+```
+
+```text
+Open the reports dashboard page.
 ```
 
 ## Deploy To Render

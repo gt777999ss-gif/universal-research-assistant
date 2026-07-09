@@ -5,7 +5,7 @@ info:
     public sources, filters spam and duplicates, ranks relevant results, and returns
     clean JSON. It does not recommend products, suppliers, purchases, or sales strategies
     unless explicitly asked.
-  version: 7.0.0
+  version: 8.0.0
 servers:
 - url: https://universal-research-assistant.onrender.com
   description: Production server
@@ -49,12 +49,123 @@ paths:
               schema:
                 $ref: '#/components/schemas/SourcesResponse'
       security: []
+  /reports:
+    get:
+      summary: List report history
+      description: Public endpoint listing report dates and recent report files.
+      operationId: listReports
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportsIndexResponse'
+      security: []
+  /reports/{date}:
+    get:
+      summary: List reports for a date
+      description: Public endpoint listing Markdown, HTML, and JSON reports for one
+        date.
+      operationId: listReportsByDate
+      parameters:
+      - name: date
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Date
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportsByDateResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security: []
+  /reports/download/{date}/{filename}:
+    get:
+      summary: Download a report file
+      description: Public report download endpoint for files under reports/YYYY-MM-DD/.
+      operationId: downloadReportFile
+      parameters:
+      - name: date
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Date
+      - name: filename
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Filename
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security: []
   /ui:
     get:
       summary: Simple public UI dashboard
       description: Public HTML dashboard showing service status, source status, monitor
         summaries, recent reports, and documentation links.
       operationId: getUIDashboard
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+      security: []
+  /ui/reports:
+    get:
+      summary: Report history browser
+      description: Public HTML page for browsing local report history.
+      operationId: getUIReports
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+      security: []
+  /ui/monitors:
+    get:
+      summary: Monitor browser
+      description: Public HTML page listing saved monitor definitions without exposing
+        API keys.
+      operationId: getUIMonitors
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+      security: []
+  /ui/status:
+    get:
+      summary: Status page
+      description: Public HTML page showing service and source status.
+      operationId: getUIStatus
       responses:
         '200':
           description: Successful Response
@@ -2112,6 +2223,35 @@ components:
       - format
       - export_path
       title: ReportExportResponse
+    ReportFileItem:
+      properties:
+        path:
+          type: string
+          title: Path
+        date:
+          type: string
+          title: Date
+        name:
+          type: string
+          title: Name
+        type:
+          type: string
+          title: Type
+        size_bytes:
+          type: integer
+          title: Size Bytes
+          default: 0
+        download_url:
+          type: string
+          title: Download Url
+          default: ''
+      type: object
+      required:
+      - path
+      - date
+      - name
+      - type
+      title: ReportFileItem
     ReportResponse:
       properties:
         query:
@@ -2142,6 +2282,34 @@ components:
       - markdown_report
       - results_count
       title: ReportResponse
+    ReportsByDateResponse:
+      properties:
+        date:
+          type: string
+          title: Date
+        reports:
+          items:
+            $ref: '#/components/schemas/ReportFileItem'
+          type: array
+          title: Reports
+      type: object
+      required:
+      - date
+      title: ReportsByDateResponse
+    ReportsIndexResponse:
+      properties:
+        dates:
+          items:
+            type: string
+          type: array
+          title: Dates
+        recent_reports:
+          items:
+            $ref: '#/components/schemas/ReportFileItem'
+          type: array
+          title: Recent Reports
+      type: object
+      title: ReportsIndexResponse
     RiskItem:
       properties:
         risk:

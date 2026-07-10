@@ -3859,7 +3859,8 @@
           },
           "ctx": {
             "type": "object",
-            "title": "Context"
+            "title": "Context",
+            "properties": {}
           }
         },
         "type": "object",

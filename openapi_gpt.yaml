@@ -2743,6 +2743,7 @@ components:
         ctx:
           type: object
           title: Context
+          properties: {}
       type: object
       required:
       - loc

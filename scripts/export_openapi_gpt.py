@@ -40,6 +40,20 @@ INCLUDED_OPERATIONS: Tuple[Tuple[str, str], ...] = (
     ("/mcp/briefing", "post"),
 )
 
+OBJECT_SHAPE_KEYS = {"properties", "additionalProperties", "oneOf", "allOf", "anyOf", "$ref"}
+
+
+def normalize_object_schemas(value: Any) -> None:
+    """Give every object schema an explicit shape for ChatGPT Actions imports."""
+    if isinstance(value, dict):
+        if value.get("type") == "object" and not OBJECT_SHAPE_KEYS.intersection(value):
+            value["properties"] = {}
+        for child in value.values():
+            normalize_object_schemas(child)
+    elif isinstance(value, list):
+        for child in value:
+            normalize_object_schemas(child)
+
 
 def build_gpt_openapi() -> Dict[str, Any]:
     full_schema = app.openapi()
@@ -61,6 +75,8 @@ def build_gpt_openapi() -> Dict[str, Any]:
     for path, method in INCLUDED_OPERATIONS:
         operation = full_schema["paths"][path][method]
         filtered["paths"].setdefault(path, {})[method] = copy.deepcopy(operation)
+
+    normalize_object_schemas(filtered)
 
     operation_count = sum(len(methods) for methods in filtered["paths"].values())
     if operation_count != 23:

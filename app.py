@@ -627,6 +627,34 @@ async def sources() -> SourcesResponse:
 
 
 @app.get(
+    "/openapi_gpt.json",
+    operation_id="getGPTOptimizedOpenAPIJson",
+    summary="GPT optimized OpenAPI JSON",
+    description="Public ChatGPT Actions optimized OpenAPI JSON specification.",
+    openapi_extra={"security": []},
+)
+async def openapi_gpt_json() -> FileResponse:
+    path = Path("openapi_gpt.json")
+    if not path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="openapi_gpt.json not found.")
+    return FileResponse(path, media_type="application/json")
+
+
+@app.get(
+    "/openapi_gpt.yaml",
+    operation_id="getGPTOptimizedOpenAPIYaml",
+    summary="GPT optimized OpenAPI YAML",
+    description="Public ChatGPT Actions optimized OpenAPI YAML specification.",
+    openapi_extra={"security": []},
+)
+async def openapi_gpt_yaml() -> FileResponse:
+    path = Path("openapi_gpt.yaml")
+    if not path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="openapi_gpt.yaml not found.")
+    return FileResponse(path, media_type="application/yaml")
+
+
+@app.get(
     "/reports",
     response_model=ReportsIndexResponse,
     operation_id="listReports",

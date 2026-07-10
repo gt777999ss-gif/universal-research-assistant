@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Universal Public Information Research Assistant",
-    "description": "Universal public information research assistant. It searches permitted public sources, filters spam and duplicates, ranks relevant results, and returns clean JSON. It does not recommend products, suppliers, purchases, or sales strategies unless explicitly asked.",
+    "title": "Universal Research Assistant V9 GPT Actions API",
+    "description": "ChatGPT Actions optimized OpenAPI specification for the Universal Research Assistant. This reduced schema keeps the most important public information research, agent, monitoring, reporting, and MCP wrapper operations under the ChatGPT Actions operation limit.",
     "version": "9.0.0"
   },
   "servers": [
@@ -32,26 +32,6 @@
         "security": []
       }
     },
-    "/privacy": {
-      "get": {
-        "summary": "Privacy policy",
-        "description": "Public privacy policy page. Does not require an API key.",
-        "operationId": "getPrivacyPolicy",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "security": []
-      }
-    },
     "/sources": {
       "get": {
         "summary": "List source availability",
@@ -70,917 +50,6 @@
           }
         },
         "security": []
-      }
-    },
-    "/openapi_gpt.json": {
-      "get": {
-        "summary": "GPT optimized OpenAPI JSON",
-        "description": "Public ChatGPT Actions optimized OpenAPI JSON specification.",
-        "operationId": "getGPTOptimizedOpenAPIJson",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": []
-      }
-    },
-    "/openapi_gpt.yaml": {
-      "get": {
-        "summary": "GPT optimized OpenAPI YAML",
-        "description": "Public ChatGPT Actions optimized OpenAPI YAML specification.",
-        "operationId": "getGPTOptimizedOpenAPIYaml",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": []
-      }
-    },
-    "/reports": {
-      "get": {
-        "summary": "List report history",
-        "description": "Public endpoint listing report dates and recent report files.",
-        "operationId": "listReports",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReportsIndexResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": []
-      }
-    },
-    "/reports/{date}": {
-      "get": {
-        "summary": "List reports for a date",
-        "description": "Public endpoint listing Markdown, HTML, and JSON reports for one date.",
-        "operationId": "listReportsByDate",
-        "parameters": [
-          {
-            "name": "date",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Date"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReportsByDateResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": []
-      }
-    },
-    "/reports/download/{date}/{filename}": {
-      "get": {
-        "summary": "Download a report file",
-        "description": "Public report download endpoint for files under reports/YYYY-MM-DD/.",
-        "operationId": "downloadReportFile",
-        "parameters": [
-          {
-            "name": "date",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Date"
-            }
-          },
-          {
-            "name": "filename",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Filename"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": []
-      }
-    },
-    "/ui": {
-      "get": {
-        "summary": "Simple public UI dashboard",
-        "description": "Public HTML dashboard showing service status, source status, monitor summaries, recent reports, and documentation links.",
-        "operationId": "getUIDashboard",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "security": []
-      }
-    },
-    "/ui/reports": {
-      "get": {
-        "summary": "Report history browser",
-        "description": "Public HTML page for browsing local report history.",
-        "operationId": "getUIReports",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "security": []
-      }
-    },
-    "/ui/monitors": {
-      "get": {
-        "summary": "Monitor browser",
-        "description": "Public HTML page listing saved monitor definitions without exposing API keys.",
-        "operationId": "getUIMonitors",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "security": []
-      }
-    },
-    "/ui/status": {
-      "get": {
-        "summary": "Status page",
-        "description": "Public HTML page showing service and source status.",
-        "operationId": "getUIStatus",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "security": []
-      }
-    },
-    "/mcp/manifest": {
-      "get": {
-        "summary": "MCP compatibility manifest",
-        "description": "Public manifest describing MCP-compatible wrapper endpoints.",
-        "operationId": "getMCPManifest",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MCPManifestResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": []
-      }
-    },
-    "/monitors": {
-      "get": {
-        "summary": "List monitor jobs",
-        "description": "Lists saved monitor jobs for the monitoring center. Requires the X-API-Key header.",
-        "operationId": "listEnterpriseMonitors",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MonitorListResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      },
-      "post": {
-        "summary": "Create a monitor job",
-        "description": "Creates a saved monitor job with optional saved searches and alert rules. Requires the X-API-Key header.",
-        "operationId": "createEnterpriseMonitor",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MonitorConfig"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Monitor"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/monitors/{id}": {
-      "put": {
-        "summary": "Edit, enable, or disable a monitor job",
-        "description": "Updates monitor configuration. Set enabled true or false to enable/disable jobs. Requires the X-API-Key header.",
-        "operationId": "updateEnterpriseMonitor",
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MonitorUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Monitor"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "summary": "Delete a monitor job",
-        "description": "Deletes one monitor job. Requires the X-API-Key header.",
-        "operationId": "deleteEnterpriseMonitor",
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "boolean"
-                  },
-                  "title": "Response Deleteenterprisemonitor"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/monitor/create": {
-      "post": {
-        "summary": "Create a public information monitor",
-        "description": "Creates a saved monitor definition under data/monitors/. Requires the X-API-Key header.",
-        "operationId": "createMonitor",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MonitorConfig"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Monitor"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/monitor": {
-      "get": {
-        "summary": "List monitors",
-        "description": "Lists saved monitor definitions. Requires the X-API-Key header.",
-        "operationId": "listMonitors",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MonitorListResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/monitor/{id}": {
-      "get": {
-        "summary": "Get a monitor",
-        "description": "Returns one saved monitor definition. Requires the X-API-Key header.",
-        "operationId": "getMonitor",
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Monitor"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "summary": "Delete a monitor",
-        "description": "Deletes one saved monitor definition. Requires the X-API-Key header.",
-        "operationId": "deleteMonitor",
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "boolean"
-                  },
-                  "title": "Response Deletemonitor"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/monitor/run": {
-      "post": {
-        "summary": "Run monitors manually",
-        "description": "Runs one monitor by ID or all due enabled monitors. Requires the X-API-Key header.",
-        "operationId": "runMonitors",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MonitorRunRequest",
-                "default": {
-                  "force": true
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MonitorRunResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/alerts": {
-      "get": {
-        "summary": "List recent alerts",
-        "description": "Lists locally stored alert events. Requires the X-API-Key header.",
-        "operationId": "listAlerts",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AlertsResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/scheduler": {
-      "get": {
-        "summary": "Get scheduler status",
-        "description": "Returns in-process scheduler status and supported frequencies. Requires the X-API-Key header.",
-        "operationId": "getSchedulerStatus",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SchedulerResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/dashboard": {
-      "get": {
-        "summary": "Get monitoring dashboard data",
-        "description": "Returns monitor status, recent reports, and warnings. Requires the X-API-Key header.",
-        "operationId": "getMonitoringDashboard",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DashboardResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/agent/plan": {
-      "post": {
-        "summary": "Plan an autonomous research task",
-        "description": "Creates deterministic multi-step public information research plans from a broad goal. Requires the X-API-Key header.",
-        "operationId": "planResearchAgent",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentPlanRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AgentPlanResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/agent/run": {
-      "post": {
-        "summary": "Run an autonomous research investigation",
-        "description": "Plans, searches, deduplicates, analyzes, and returns a deterministic research briefing. Requires the X-API-Key header.",
-        "operationId": "runResearchAgent",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentRunRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AgentRunResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/agent/watch/create": {
-      "post": {
-        "summary": "Create a long-term topic watch",
-        "description": "Creates one or more monitor definitions for a long-term research goal. Requires the X-API-Key header.",
-        "operationId": "createTopicWatch",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TopicWatchCreateRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TopicWatchCreateResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/agent/changes": {
-      "post": {
-        "summary": "Detect topic changes",
-        "description": "Compares current public information signals against prior saved reports when available. Requires the X-API-Key header.",
-        "operationId": "detectTopicChanges",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentChangesRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AgentChangesResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/agent/briefing": {
-      "post": {
-        "summary": "Generate an autonomous research briefing",
-        "description": "Runs a deterministic public information research briefing for a goal and topics. Requires the X-API-Key header.",
-        "operationId": "generateAgentBriefing",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentBriefingRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AgentBriefingResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
       }
     },
     "/search": {
@@ -1188,6 +257,549 @@
         ]
       }
     },
+    "/batch": {
+      "post": {
+        "summary": "Run multiple research analysis tasks",
+        "description": "Runs multiple public information research tasks and returns concise deterministic analysis summaries.",
+        "operationId": "batchResearchTasks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/agent/plan": {
+      "post": {
+        "summary": "Plan an autonomous research task",
+        "description": "Creates deterministic multi-step public information research plans from a broad goal. Requires the X-API-Key header.",
+        "operationId": "planResearchAgent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPlanResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/agent/run": {
+      "post": {
+        "summary": "Run an autonomous research investigation",
+        "description": "Plans, searches, deduplicates, analyzes, and returns a deterministic research briefing. Requires the X-API-Key header.",
+        "operationId": "runResearchAgent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/agent/changes": {
+      "post": {
+        "summary": "Detect topic changes",
+        "description": "Compares current public information signals against prior saved reports when available. Requires the X-API-Key header.",
+        "operationId": "detectTopicChanges",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentChangesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentChangesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/agent/briefing": {
+      "post": {
+        "summary": "Generate an autonomous research briefing",
+        "description": "Runs a deterministic public information research briefing for a goal and topics. Requires the X-API-Key header.",
+        "operationId": "generateAgentBriefing",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentBriefingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentBriefingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/monitors": {
+      "get": {
+        "summary": "List monitor jobs",
+        "description": "Lists saved monitor jobs for the monitoring center. Requires the X-API-Key header.",
+        "operationId": "listEnterpriseMonitors",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitorListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Create a monitor job",
+        "description": "Creates a saved monitor job with optional saved searches and alert rules. Requires the X-API-Key header.",
+        "operationId": "createEnterpriseMonitor",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonitorConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Monitor"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/monitors/{id}": {
+      "put": {
+        "summary": "Edit, enable, or disable a monitor job",
+        "description": "Updates monitor configuration. Set enabled true or false to enable/disable jobs. Requires the X-API-Key header.",
+        "operationId": "updateEnterpriseMonitor",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonitorUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Monitor"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a monitor job",
+        "description": "Deletes one monitor job. Requires the X-API-Key header.",
+        "operationId": "deleteEnterpriseMonitor",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Deleteenterprisemonitor"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/monitor/run": {
+      "post": {
+        "summary": "Run monitors manually",
+        "description": "Runs one monitor by ID or all due enabled monitors. Requires the X-API-Key header.",
+        "operationId": "runMonitors",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonitorRunRequest",
+                "default": {
+                  "force": true
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitorRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/alerts": {
+      "get": {
+        "summary": "List recent alerts",
+        "description": "Lists locally stored alert events. Requires the X-API-Key header.",
+        "operationId": "listAlerts",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/scheduler": {
+      "get": {
+        "summary": "Get scheduler status",
+        "description": "Returns in-process scheduler status and supported frequencies. Requires the X-API-Key header.",
+        "operationId": "getSchedulerStatus",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchedulerResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/reports": {
+      "get": {
+        "summary": "List report history",
+        "description": "Public endpoint listing report dates and recent report files.",
+        "operationId": "listReports",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportsIndexResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/reports/{date}": {
+      "get": {
+        "summary": "List reports for a date",
+        "description": "Public endpoint listing Markdown, HTML, and JSON reports for one date.",
+        "operationId": "listReportsByDate",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportsByDateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
     "/mcp/search": {
       "post": {
         "summary": "MCP search wrapper",
@@ -1298,226 +910,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AgentBriefingResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/report/daily": {
-      "post": {
-        "summary": "Generate a daily monitoring report",
-        "description": "Generates a daily public information monitoring report and stores JSON and Markdown files. Requires the X-API-Key header.",
-        "operationId": "generateDailyReport",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AnalysisRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MonitoringReportResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/report/weekly": {
-      "post": {
-        "summary": "Generate a weekly monitoring report",
-        "description": "Generates a weekly public information monitoring report and stores JSON and Markdown files. Requires the X-API-Key header.",
-        "operationId": "generateWeeklyReport",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AnalysisRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MonitoringReportResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/report/compare": {
-      "post": {
-        "summary": "Compare two report dates",
-        "description": "Compares stored JSON reports by date and returns topic, risk, and opportunity differences. Requires the X-API-Key header.",
-        "operationId": "compareReports",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CompareReportsRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CompareReportsResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/notify/test": {
-      "post": {
-        "summary": "Test notification framework",
-        "description": "Returns placeholder status for email, Telegram, Discord, or webhook notification channels. Requires the X-API-Key header.",
-        "operationId": "testNotification",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NotifyTestRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotifyTestResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/batch": {
-      "post": {
-        "summary": "Run multiple research analysis tasks",
-        "description": "Runs multiple public information research tasks and returns concise deterministic analysis summaries.",
-        "operationId": "batchResearchTasks",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BatchRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BatchResponse"
                 }
               }
             }

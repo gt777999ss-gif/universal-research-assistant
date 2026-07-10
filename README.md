@@ -738,12 +738,26 @@ Generate JSON if needed:
 python3 scripts/export_openapi.py
 ```
 
+Generate the ChatGPT Actions optimized schema:
+
+```bash
+python3 scripts/export_openapi_gpt.py
+```
+
 The generated schema includes:
 
 - Production server: `https://universal-research-assistant.onrender.com`
 - `X-API-Key` header authentication for `/search`, `/analyze`, `/report`, and `/batch`
 - `X-API-Key` header authentication for monitoring, report history, dashboard, notification test, and agent endpoints
 - Public `/health`, `/privacy`, and `/sources` endpoints with `security: []`
+
+For ChatGPT Custom GPT Actions, use the optimized 23-operation schema:
+
+```text
+https://universal-research-assistant.onrender.com/openapi_gpt.json
+```
+
+The full `openapi.yaml` and `openapi.json` remain available for complete API documentation.
 
 ## Example ChatGPT Prompts
 
@@ -927,16 +941,16 @@ curl https://YOUR-RAILWAY-DOMAIN.up.railway.app/health
 curl https://universal-research-assistant.onrender.com/health
 ```
 
-3. Confirm `openapi.yaml` lists the production server:
+3. Confirm the optimized ChatGPT Actions schema is available:
 
 ```text
-https://universal-research-assistant.onrender.com
+https://universal-research-assistant.onrender.com/openapi_gpt.json
 ```
 
 4. In ChatGPT, create or edit a Custom GPT.
 5. Open **Configure > Actions**.
 6. Choose **Create new action**.
-7. Import or paste the contents of `openapi.yaml`.
+7. Import from `https://universal-research-assistant.onrender.com/openapi_gpt.json`, or paste the contents of `openapi_gpt.json`.
 8. Set authentication:
 
 ```text

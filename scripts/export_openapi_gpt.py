@@ -40,19 +40,49 @@ INCLUDED_OPERATIONS: Tuple[Tuple[str, str], ...] = (
     ("/mcp/briefing", "post"),
 )
 
-OBJECT_SHAPE_KEYS = {"properties", "additionalProperties", "oneOf", "allOf", "anyOf", "$ref"}
+EXPLICIT_OBJECT_PROPERTIES: Dict[str, Dict[str, Any]] = {
+    "alert_rules": {
+        "new_keyword": {"type": "boolean"},
+        "trend_spike": {"type": "boolean"},
+        "source_updated": {"type": "boolean"},
+        "competitor_mentioned": {"type": "boolean"},
+    },
+    "recommended_monitors": {"name": {"type": "string"}, "query": {"type": "string"}},
+    "recommended_reports": {"report_type": {"type": "string"}, "query": {"type": "string"}},
+    "recent_reports": {"date": {"type": "string"}, "title": {"type": "string"}, "path": {"type": "string"}},
+    "recent_alerts": {"message": {"type": "string"}, "severity": {"type": "string"}, "created_at": {"type": "string"}},
+    "scheduler_status": {"running": {"type": "boolean"}, "enabled_monitors": {"type": "integer"}},
+    "tools": {"name": {"type": "string"}, "description": {"type": "string"}},
+    "results": {"monitor_id": {"type": "string"}, "report_path": {"type": "string"}, "status": {"type": "string"}},
+    "json_report": {"executive_summary": {"type": "string"}, "top_stories": {"type": "array", "items": {"type": "string"}}},
+    "export_paths": {"markdown": {"type": "string"}, "html": {"type": "string"}, "json": {"type": "string"}, "csv": {"type": "string"}},
+    "exports": {"csv": {"type": "string"}, "markdown": {"type": "string"}},
+    "analysis": {"executive_summary": {"type": "string"}, "warnings": {"type": "array", "items": {"type": "string"}}},
+    "ctx": {"field": {"type": "string"}, "message": {"type": "string"}},
+    "Response Deleteenterprisemonitor": {"success": {"type": "boolean"}, "message": {"type": "string"}},
+}
 
 
-def normalize_object_schemas(value: Any) -> None:
-    """Give every object schema an explicit shape for ChatGPT Actions imports."""
+def explicit_properties(key: str, schema: Dict[str, Any]) -> Dict[str, Any]:
+    """Describe dynamic backend dictionaries with ChatGPT Actions-safe fields."""
+    name = schema.get("title", key)
+    return copy.deepcopy(EXPLICIT_OBJECT_PROPERTIES.get(name, EXPLICIT_OBJECT_PROPERTIES.get(key, {
+        "data": {"type": "string", "description": "Serialized response data."},
+    })))
+
+
+def normalize_object_schemas(value: Any, key: str = "") -> None:
+    """Remove dynamic object maps, which the ChatGPT Actions importer rejects."""
     if isinstance(value, dict):
-        if value.get("type") == "object" and not OBJECT_SHAPE_KEYS.intersection(value):
-            value["properties"] = {}
-        for child in value.values():
-            normalize_object_schemas(child)
+        if value.get("type") == "object":
+            value.pop("additionalProperties", None)
+            if not value.get("properties"):
+                value["properties"] = explicit_properties(key, value)
+        for child_key, child in value.items():
+            normalize_object_schemas(child, child_key)
     elif isinstance(value, list):
         for child in value:
-            normalize_object_schemas(child)
+            normalize_object_schemas(child, key)
 
 
 def build_gpt_openapi() -> Dict[str, Any]:

@@ -624,10 +624,15 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": {
-                    "type": "boolean"
-                  },
-                  "title": "Response Deleteenterprisemonitor"
+                  "title": "Response Deleteenterprisemonitor",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
                 }
               }
             }
@@ -1230,16 +1235,26 @@
           },
           "recommended_monitors": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "string",
+                  "description": "Serialized response data."
+                }
+              }
             },
             "type": "array",
             "title": "Recommended Monitors"
           },
           "recommended_reports": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "string",
+                  "description": "Serialized response data."
+                }
+              }
             },
             "type": "array",
             "title": "Recommended Reports"
@@ -2082,24 +2097,41 @@
           },
           "recent_reports": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "string",
+                  "description": "Serialized response data."
+                }
+              }
             },
             "type": "array",
             "title": "Recent Reports"
           },
           "recent_alerts": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "string",
+                  "description": "Serialized response data."
+                }
+              }
             },
             "type": "array",
             "title": "Recent Alerts"
           },
           "scheduler_status": {
-            "additionalProperties": true,
             "type": "object",
-            "title": "Scheduler Status"
+            "title": "Scheduler Status",
+            "properties": {
+              "running": {
+                "type": "boolean"
+              },
+              "enabled_monitors": {
+                "type": "integer"
+              }
+            }
           },
           "warnings": {
             "items": {
@@ -2200,8 +2232,13 @@
           },
           "tools": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "string",
+                  "description": "Serialized response data."
+                }
+              }
             },
             "type": "array",
             "title": "Tools"
@@ -2334,9 +2371,22 @@
             "title": "Saved Searches"
           },
           "alert_rules": {
-            "additionalProperties": true,
             "type": "object",
-            "title": "Alert Rules"
+            "title": "Alert Rules",
+            "properties": {
+              "new_keyword": {
+                "type": "boolean"
+              },
+              "trend_spike": {
+                "type": "boolean"
+              },
+              "source_updated": {
+                "type": "boolean"
+              },
+              "competitor_mentioned": {
+                "type": "boolean"
+              }
+            }
           },
           "id": {
             "type": "string",
@@ -2512,9 +2562,22 @@
             "title": "Saved Searches"
           },
           "alert_rules": {
-            "additionalProperties": true,
             "type": "object",
-            "title": "Alert Rules"
+            "title": "Alert Rules",
+            "properties": {
+              "new_keyword": {
+                "type": "boolean"
+              },
+              "trend_spike": {
+                "type": "boolean"
+              },
+              "source_updated": {
+                "type": "boolean"
+              },
+              "competitor_mentioned": {
+                "type": "boolean"
+              }
+            }
           }
         },
         "type": "object",
@@ -2572,8 +2635,13 @@
           },
           "results": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "string",
+                  "description": "Serialized response data."
+                }
+              }
             },
             "type": "array",
             "title": "Results"
@@ -2771,8 +2839,13 @@
           "alert_rules": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "string",
+                    "description": "Serialized response data."
+                  }
+                }
               },
               {
                 "type": "null"
@@ -2800,16 +2873,37 @@
             "title": "Markdown Report"
           },
           "json_report": {
-            "additionalProperties": true,
             "type": "object",
-            "title": "Json Report"
+            "title": "Json Report",
+            "properties": {
+              "executive_summary": {
+                "type": "string"
+              },
+              "top_stories": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "export_paths": {
-            "additionalProperties": {
-              "type": "string"
-            },
             "type": "object",
-            "title": "Export Paths"
+            "title": "Export Paths",
+            "properties": {
+              "markdown": {
+                "type": "string"
+              },
+              "html": {
+                "type": "string"
+              },
+              "json": {
+                "type": "string"
+              },
+              "csv": {
+                "type": "string"
+              }
+            }
           },
           "warnings": {
             "items": {
@@ -3440,17 +3534,27 @@
             "title": "Results"
           },
           "exports": {
-            "additionalProperties": {
-              "type": "string"
-            },
             "type": "object",
-            "title": "Exports"
+            "title": "Exports",
+            "properties": {
+              "csv": {
+                "type": "string"
+              },
+              "markdown": {
+                "type": "string"
+              }
+            }
           },
           "analysis": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "string",
+                    "description": "Serialized response data."
+                  }
+                }
               },
               {
                 "type": "null"
@@ -3860,7 +3964,14 @@
           "ctx": {
             "type": "object",
             "title": "Context",
-            "properties": {}
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
           }
         },
         "type": "object",

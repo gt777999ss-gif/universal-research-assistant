@@ -23,6 +23,7 @@ data/monitors/*.json
 data/history/*.json
 data/alerts/*.json
 data/manual_imports/*.csv
+data/workflows/*.json
 
 # Local/editor files
 .DS_Store

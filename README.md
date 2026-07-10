@@ -1,8 +1,42 @@
-# Universal AI-Powered Public Information Research Assistant V9 Enterprise Automation Platform
+# Universal AI-Powered Public Information Research Assistant V10 Enterprise AI Research Agent
 
 FastAPI backend for public information research, deterministic reporting, optional AI-enhanced analysis, monitoring automation, alert rules, scheduler status, downloadable report exports, HTML dashboard pages, and MCP-compatible wrappers. It is useful without Gemini or OpenAI: if AI keys are missing or invalid, the system falls back to deterministic analysis and still generates reports.
 
 This is not an e-commerce recommendation system. By default it does not recommend products, suppliers, purchases, or selling strategies.
+
+## V10 Unified Research Workflows
+
+V10 adds a local-first unified workflow API. `POST /research/run` executes these structured stages: `plan`, `search`, `collect`, `normalize`, `deduplicate`, `filter`, `rank`, `analyze`, `report`, `save`, and `export`. A workflow saves non-secret metadata in `data/workflows/` and reports under `reports/YYYY-MM-DD/`, with stable download links when `save_report` is enabled.
+
+```json
+{
+  "topic": "AI video tools",
+  "queries": ["Google Veo latest updates", "Runway latest updates", "Kling AI latest updates"],
+  "sources": ["google_news", "youtube", "reddit", "rss", "web"],
+  "days": 7,
+  "limit_per_source": 20,
+  "use_ai": false,
+  "output_formats": ["markdown", "html", "json"],
+  "save_report": true
+}
+```
+
+The response records every stage, warnings, traceable result fields, deterministic analysis, report sections, and download URLs. If an optional provider fails, the workflow continues with available sources. If no public results remain after collection and filtering, it returns `status: "failed"` without fabricating a report.
+
+Reusable templates are available through `GET /research/templates` and `POST /research/run-template`:
+
+- `ai_video_weekly`
+- `ai_news_daily`
+- `youtube_channel_watch`
+- `tiktok_pet_thailand`
+- `competitor_monitor`
+- `custom`
+
+`ai_video_weekly` covers Google Veo, Runway, Kling AI, Seedance, Pika, HeyGen, and Luma AI. `tiktok_pet_thailand` only uses permitted public sources and never login-scrapes TikTok or generates product or supplier recommendations.
+
+Workflow UI pages are public and never expose secrets: `GET /ui/research`, `GET /ui/workflows`, and `GET /ui/templates`.
+
+Deterministic reports distinguish verified source facts, deterministic interpretation, and forecast/inference. AI enhancement remains optional; a missing or failed provider adds a warning and does not claim AI was used.
 
 ## Core Rules
 

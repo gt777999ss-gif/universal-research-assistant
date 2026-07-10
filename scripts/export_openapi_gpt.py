@@ -35,6 +35,11 @@ INCLUDED_OPERATIONS: Tuple[Tuple[str, str], ...] = (
     ("/scheduler", "get"),
     ("/reports", "get"),
     ("/reports/{date}", "get"),
+    ("/research/run", "post"),
+    ("/research/workflows", "get"),
+    ("/research/workflows/{workflow_id}", "get"),
+    ("/research/templates", "get"),
+    ("/research/run-template", "post"),
     ("/mcp/search", "post"),
     ("/mcp/analyze", "post"),
     ("/mcp/briefing", "post"),
@@ -95,7 +100,7 @@ def build_gpt_openapi() -> Dict[str, Any]:
             "description": "Production server",
         }
     ]
-    filtered["info"]["title"] = "Universal Research Assistant V9 GPT Actions API"
+    filtered["info"]["title"] = "Universal Research Assistant V10 GPT Actions API"
     filtered["info"]["description"] = (
         "ChatGPT Actions optimized OpenAPI specification for the Universal Research Assistant. "
         "This reduced schema keeps the most important public information research, agent, monitoring, "
@@ -109,8 +114,8 @@ def build_gpt_openapi() -> Dict[str, Any]:
     normalize_object_schemas(filtered)
 
     operation_count = sum(len(methods) for methods in filtered["paths"].values())
-    if operation_count != 23:
-        raise RuntimeError(f"GPT OpenAPI operation count must be 23, got {operation_count}.")
+    if operation_count != 28:
+        raise RuntimeError(f"GPT OpenAPI operation count must be 28, got {operation_count}.")
     return filtered
 
 

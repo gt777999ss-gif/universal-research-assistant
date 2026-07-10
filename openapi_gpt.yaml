@@ -1,11 +1,11 @@
 openapi: 3.1.0
 info:
-  title: Universal Research Assistant V9 GPT Actions API
+  title: Universal Research Assistant V10 GPT Actions API
   description: ChatGPT Actions optimized OpenAPI specification for the Universal Research
     Assistant. This reduced schema keeps the most important public information research,
     agent, monitoring, reporting, and MCP wrapper operations under the ChatGPT Actions
     operation limit.
-  version: 9.0.0
+  version: 10.0.0
 servers:
 - url: https://universal-research-assistant.onrender.com
   description: Production server
@@ -506,6 +506,119 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
       security: []
+  /research/run:
+    post:
+      summary: Run a unified research workflow
+      description: Plans, searches permitted public sources, deduplicates, ranks,
+        analyzes, reports, saves, and exports one research workflow. Requires the
+        X-API-Key header.
+      operationId: runUnifiedResearchWorkflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResearchWorkflowRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchWorkflowResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - APIKeyHeader: []
+  /research/workflows:
+    get:
+      summary: List research workflow history
+      description: Lists locally stored research workflow metadata. Requires the X-API-Key
+        header.
+      operationId: listResearchWorkflows
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowListResponse'
+      security:
+      - APIKeyHeader: []
+  /research/workflows/{workflow_id}:
+    get:
+      summary: Get one research workflow
+      description: Returns a saved workflow, stage status, traceable results, report,
+        and download links. Requires the X-API-Key header.
+      operationId: getResearchWorkflow
+      security:
+      - APIKeyHeader: []
+      parameters:
+      - name: workflow_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workflow Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchWorkflowResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /research/templates:
+    get:
+      summary: List reusable research templates
+      description: Lists supported public-information research templates. Requires
+        the X-API-Key header.
+      operationId: listResearchTemplates
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchTemplatesResponse'
+      security:
+      - APIKeyHeader: []
+  /research/run-template:
+    post:
+      summary: Run a reusable research template
+      description: Runs a template with optional non-secret request overrides. Requires
+        the X-API-Key header.
+      operationId: runResearchTemplate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunTemplateRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchWorkflowResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - APIKeyHeader: []
   /mcp/search:
     post:
       summary: MCP search wrapper
@@ -2332,6 +2445,233 @@ components:
           title: Recent Reports
       type: object
       title: ReportsIndexResponse
+    ResearchTemplate:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        description:
+          type: string
+          title: Description
+        topic:
+          type: string
+          title: Topic
+        queries:
+          items:
+            type: string
+          type: array
+          title: Queries
+        sources:
+          items:
+            type: string
+            enum:
+            - youtube
+            - x
+            - tiktok
+            - reddit
+            - google_news
+            - rss
+            - web
+            - manual_csv
+          type: array
+          title: Sources
+        days:
+          type: integer
+          title: Days
+        limit_per_source:
+          type: integer
+          title: Limit Per Source
+        output_formats:
+          items:
+            type: string
+            enum:
+            - markdown
+            - html
+            - json
+            - pdf
+          type: array
+          title: Output Formats
+      type: object
+      required:
+      - id
+      - name
+      - description
+      - topic
+      - days
+      - limit_per_source
+      title: ResearchTemplate
+    ResearchTemplatesResponse:
+      properties:
+        templates:
+          items:
+            $ref: '#/components/schemas/ResearchTemplate'
+          type: array
+          title: Templates
+      type: object
+      title: ResearchTemplatesResponse
+    ResearchWorkflowRequest:
+      properties:
+        topic:
+          type: string
+          maxLength: 500
+          minLength: 1
+          title: Topic
+        queries:
+          items:
+            type: string
+          type: array
+          title: Queries
+        sources:
+          items:
+            type: string
+            enum:
+            - youtube
+            - x
+            - tiktok
+            - reddit
+            - google_news
+            - rss
+            - web
+            - manual_csv
+          type: array
+          title: Sources
+          default:
+          - google_news
+          - youtube
+          - reddit
+          - rss
+          - web
+        days:
+          type: integer
+          maximum: 365.0
+          minimum: 1.0
+          title: Days
+          default: 7
+        limit_per_source:
+          type: integer
+          maximum: 50.0
+          minimum: 1.0
+          title: Limit Per Source
+          default: 20
+        language:
+          type: string
+          maxLength: 20
+          minLength: 2
+          title: Language
+          default: any
+        country:
+          type: string
+          maxLength: 20
+          minLength: 2
+          title: Country
+          default: any
+        use_ai:
+          type: boolean
+          title: Use Ai
+          default: false
+        ai_provider:
+          type: string
+          enum:
+          - auto
+          - gemini
+          - openai
+          - none
+          title: Ai Provider
+          default: auto
+        output_formats:
+          items:
+            type: string
+            enum:
+            - markdown
+            - html
+            - json
+            - pdf
+          type: array
+          title: Output Formats
+          default:
+          - markdown
+          - html
+          - json
+        save_report:
+          type: boolean
+          title: Save Report
+          default: true
+        output_language:
+          type: string
+          title: Output Language
+          default: auto
+        template_name:
+          type: string
+          title: Template Name
+          default: ''
+      type: object
+      required:
+      - topic
+      title: ResearchWorkflowRequest
+    ResearchWorkflowResponse:
+      properties:
+        workflow_id:
+          type: string
+          title: Workflow Id
+        status:
+          type: string
+          title: Status
+        topic:
+          type: string
+          title: Topic
+        started_at:
+          type: string
+          title: Started At
+        completed_at:
+          type: string
+          title: Completed At
+        stages:
+          items:
+            $ref: '#/components/schemas/WorkflowStage'
+          type: array
+          title: Stages
+        result_count:
+          type: integer
+          title: Result Count
+          default: 0
+        warnings:
+          items:
+            type: string
+          type: array
+          title: Warnings
+        analysis:
+          type: object
+          title: Analysis
+          properties:
+            executive_summary:
+              type: string
+            warnings:
+              type: array
+              items:
+                type: string
+        report:
+          type: object
+          title: Report
+          properties:
+            data:
+              type: string
+              description: Serialized response data.
+        downloads:
+          items:
+            $ref: '#/components/schemas/WorkflowDownload'
+          type: array
+          title: Downloads
+      type: object
+      required:
+      - workflow_id
+      - status
+      - topic
+      - started_at
+      - completed_at
+      title: ResearchWorkflowResponse
     RiskItem:
       properties:
         risk:
@@ -2350,6 +2690,24 @@ components:
       - risk
       - explanation
       title: RiskItem
+    RunTemplateRequest:
+      properties:
+        template:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Template
+        overrides:
+          type: object
+          title: Overrides
+          properties:
+            data:
+              type: string
+              description: Serialized response data.
+      type: object
+      required:
+      - template
+      title: RunTemplateRequest
     SchedulerResponse:
       properties:
         running:
@@ -2817,6 +3175,98 @@ components:
       - msg
       - type
       title: ValidationError
+    WorkflowDownload:
+      properties:
+        format:
+          type: string
+          title: Format
+        path:
+          type: string
+          title: Path
+        download_url:
+          type: string
+          title: Download Url
+      type: object
+      required:
+      - format
+      - path
+      - download_url
+      title: WorkflowDownload
+    WorkflowListItem:
+      properties:
+        workflow_id:
+          type: string
+          title: Workflow Id
+        status:
+          type: string
+          title: Status
+        topic:
+          type: string
+          title: Topic
+        started_at:
+          type: string
+          title: Started At
+        completed_at:
+          type: string
+          title: Completed At
+        result_count:
+          type: integer
+          title: Result Count
+          default: 0
+        warnings:
+          items:
+            type: string
+          type: array
+          title: Warnings
+      type: object
+      required:
+      - workflow_id
+      - status
+      - topic
+      - started_at
+      - completed_at
+      title: WorkflowListItem
+    WorkflowListResponse:
+      properties:
+        workflows:
+          items:
+            $ref: '#/components/schemas/WorkflowListItem'
+          type: array
+          title: Workflows
+      type: object
+      title: WorkflowListResponse
+    WorkflowStage:
+      properties:
+        name:
+          type: string
+          title: Name
+        status:
+          type: string
+          title: Status
+        started_at:
+          type: string
+          title: Started At
+        completed_at:
+          type: string
+          title: Completed At
+        details:
+          type: string
+          title: Details
+          default: ''
+        metrics:
+          type: object
+          title: Metrics
+          properties:
+            data:
+              type: string
+              description: Serialized response data.
+      type: object
+      required:
+      - name
+      - status
+      - started_at
+      - completed_at
+      title: WorkflowStage
   securitySchemes:
     APIKeyHeader:
       type: apiKey

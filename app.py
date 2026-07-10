@@ -57,6 +57,9 @@ from processors.dedupe import dedupe_results
 from processors.filter import remove_ads_spam_irrelevant
 from processors.ranker import rank_results
 from processors.summarizer import summarize_results
+from research_workflows.engine import run_workflow
+from research_workflows.store import get_workflow, list_workflows
+from research_workflows.templates import get_template, list_templates
 from scheduler.scheduler import MonitorScheduler
 
 
@@ -511,6 +514,96 @@ class MCPManifestResponse(BaseModel):
     tools: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+class WorkflowStage(BaseModel):
+    name: str
+    status: str
+    started_at: str
+    completed_at: str
+    details: str = ""
+    metrics: Dict[str, Any] = Field(default_factory=dict)
+
+
+class WorkflowDownload(BaseModel):
+    format: str
+    path: str
+    download_url: str
+
+
+class ResearchWorkflowRequest(BaseModel):
+    topic: str = Field(..., min_length=1, max_length=500)
+    queries: List[str] = Field(default_factory=list)
+    sources: List[SourceName] = Field(default=["google_news", "youtube", "reddit", "rss", "web"])
+    days: int = Field(default=7, ge=1, le=365)
+    limit_per_source: int = Field(default=20, ge=1, le=50)
+    language: str = Field(default="any", min_length=2, max_length=20)
+    country: str = Field(default="any", min_length=2, max_length=20)
+    use_ai: bool = False
+    ai_provider: AIProviderName = "auto"
+    output_formats: List[ReportExportFormat] = Field(default=["markdown", "html", "json"])
+    save_report: bool = True
+    output_language: str = "auto"
+    template_name: str = ""
+
+    @field_validator("queries")
+    @classmethod
+    def clean_workflow_queries(cls, value: List[str]) -> List[str]:
+        return [" ".join(query.split()) for query in value if query and query.strip()]
+
+    @field_validator("output_formats")
+    @classmethod
+    def unique_workflow_formats(cls, value: List[ReportExportFormat]) -> List[ReportExportFormat]:
+        return list(dict.fromkeys(value)) or ["markdown", "html", "json"]
+
+
+class ResearchWorkflowResponse(BaseModel):
+    workflow_id: str
+    status: str
+    topic: str
+    started_at: str
+    completed_at: str
+    stages: List[WorkflowStage] = Field(default_factory=list)
+    result_count: int = 0
+    warnings: List[str] = Field(default_factory=list)
+    analysis: Dict[str, Any] = Field(default_factory=dict)
+    report: Dict[str, Any] = Field(default_factory=dict)
+    downloads: List[WorkflowDownload] = Field(default_factory=list)
+
+
+class WorkflowListItem(BaseModel):
+    workflow_id: str
+    status: str
+    topic: str
+    started_at: str
+    completed_at: str
+    result_count: int = 0
+    warnings: List[str] = Field(default_factory=list)
+
+
+class WorkflowListResponse(BaseModel):
+    workflows: List[WorkflowListItem] = Field(default_factory=list)
+
+
+class ResearchTemplate(BaseModel):
+    id: str
+    name: str
+    description: str
+    topic: str
+    queries: List[str] = Field(default_factory=list)
+    sources: List[SourceName] = Field(default_factory=list)
+    days: int
+    limit_per_source: int
+    output_formats: List[ReportExportFormat] = Field(default_factory=list)
+
+
+class ResearchTemplatesResponse(BaseModel):
+    templates: List[ResearchTemplate] = Field(default_factory=list)
+
+
+class RunTemplateRequest(BaseModel):
+    template: str = Field(..., min_length=1, max_length=80)
+    overrides: Dict[str, Any] = Field(default_factory=dict)
+
+
 settings = yaml.safe_load(open("config/settings.yaml", "r", encoding="utf-8"))
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 scheduler_instance: Optional[MonitorScheduler] = None
@@ -697,6 +790,93 @@ async def download_report_file(date: str, filename: str) -> FileResponse:
     return FileResponse(path)
 
 
+@app.post(
+    "/research/run",
+    response_model=ResearchWorkflowResponse,
+    operation_id="runUnifiedResearchWorkflow",
+    summary="Run a unified research workflow",
+    description="Plans, searches permitted public sources, deduplicates, ranks, analyzes, reports, saves, and exports one research workflow. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def research_run(request: ResearchWorkflowRequest) -> ResearchWorkflowResponse:
+    result = await run_research_workflow(request)
+    return ResearchWorkflowResponse(**result)
+
+
+@app.get(
+    "/research/workflows",
+    response_model=WorkflowListResponse,
+    operation_id="listResearchWorkflows",
+    summary="List research workflow history",
+    description="Lists locally stored research workflow metadata. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def research_workflows() -> WorkflowListResponse:
+    fields = WorkflowListItem.model_fields
+    return WorkflowListResponse(workflows=[WorkflowListItem(**{key: item.get(key) for key in fields}) for item in list_workflows()])
+
+
+@app.get(
+    "/research/workflows/{workflow_id}",
+    response_model=ResearchWorkflowResponse,
+    operation_id="getResearchWorkflow",
+    summary="Get one research workflow",
+    description="Returns a saved workflow, stage status, traceable results, report, and download links. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def research_workflow(workflow_id: str) -> ResearchWorkflowResponse:
+    workflow = get_workflow(workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found.")
+    return ResearchWorkflowResponse(**workflow)
+
+
+@app.post(
+    "/research/workflows/{workflow_id}/retry",
+    response_model=ResearchWorkflowResponse,
+    operation_id="retryResearchWorkflow",
+    summary="Retry a saved research workflow",
+    description="Runs a new workflow using the saved non-secret request parameters. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def retry_research_workflow(workflow_id: str) -> ResearchWorkflowResponse:
+    workflow = get_workflow(workflow_id)
+    if not workflow or not workflow.get("request"):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow request was not found.")
+    return ResearchWorkflowResponse(**await run_research_workflow(ResearchWorkflowRequest(**workflow["request"])))
+
+
+@app.get(
+    "/research/templates",
+    response_model=ResearchTemplatesResponse,
+    operation_id="listResearchTemplates",
+    summary="List reusable research templates",
+    description="Lists supported public-information research templates. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def research_templates() -> ResearchTemplatesResponse:
+    return ResearchTemplatesResponse(templates=[ResearchTemplate(**item) for item in list_templates()])
+
+
+@app.post(
+    "/research/run-template",
+    response_model=ResearchWorkflowResponse,
+    operation_id="runResearchTemplate",
+    summary="Run a reusable research template",
+    description="Runs a template with optional non-secret request overrides. Requires the X-API-Key header.",
+    dependencies=[Depends(verify_api_key)],
+)
+async def research_run_template(request: RunTemplateRequest) -> ResearchWorkflowResponse:
+    try:
+        payload = get_template(request.template)
+    except KeyError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Research template not found.")
+    allowed = set(ResearchWorkflowRequest.model_fields)
+    payload.update({key: value for key, value in request.overrides.items() if key in allowed})
+    payload["template_name"] = request.template
+    return ResearchWorkflowResponse(**await run_research_workflow(ResearchWorkflowRequest(**payload)))
+
+
 @app.get(
     "/ui",
     response_class=HTMLResponse,
@@ -743,6 +923,42 @@ async def ui_monitors() -> HTMLResponse:
 )
 async def ui_status() -> HTMLResponse:
     return HTMLResponse(build_ui_page("Status", status_sections()))
+
+
+@app.get(
+    "/ui/research",
+    response_class=HTMLResponse,
+    operation_id="getUIResearch",
+    summary="Research workflow dashboard",
+    description="Public HTML page showing workflow capabilities and saved report links.",
+    openapi_extra={"security": []},
+)
+async def ui_research() -> HTMLResponse:
+    return HTMLResponse(build_ui_page("Research", research_sections()))
+
+
+@app.get(
+    "/ui/workflows",
+    response_class=HTMLResponse,
+    operation_id="getUIWorkflows",
+    summary="Research workflow history browser",
+    description="Public HTML page showing recent saved workflow status without exposing secrets.",
+    openapi_extra={"security": []},
+)
+async def ui_workflows() -> HTMLResponse:
+    return HTMLResponse(build_ui_page("Workflows", workflow_sections()))
+
+
+@app.get(
+    "/ui/templates",
+    response_class=HTMLResponse,
+    operation_id="getUITemplates",
+    summary="Research templates browser",
+    description="Public HTML page listing reusable public-information workflow templates.",
+    openapi_extra={"security": []},
+)
+async def ui_templates() -> HTMLResponse:
+    return HTMLResponse(build_ui_page("Research Templates", template_sections()))
 
 
 @app.get(
@@ -1519,7 +1735,7 @@ def build_ui_page(title: str, sections: List[str]) -> str:
         "section{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;margin:16px 0}table{border-collapse:collapse;width:100%;margin:12px 0}td,th{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left;font-size:14px}"
         ".ok{color:#047857;font-weight:600}.warn{color:#b45309;font-weight:600}.muted{color:#6b7280}"
     )
-    nav = "<nav><a href='/ui'>Dashboard</a><a href='/ui/status'>Status</a><a href='/ui/reports'>Reports</a><a href='/ui/monitors'>Monitors</a><a href='/openapi.json'>OpenAPI</a><a href='/privacy'>Privacy</a></nav>"
+    nav = "<nav><a href='/ui'>Dashboard</a><a href='/ui/research'>Research</a><a href='/ui/workflows'>Workflows</a><a href='/ui/templates'>Templates</a><a href='/ui/status'>Status</a><a href='/ui/reports'>Reports</a><a href='/ui/monitors'>Monitors</a><a href='/openapi.json'>OpenAPI</a><a href='/privacy'>Privacy</a></nav>"
     return f"<!doctype html><html><head><meta charset='utf-8'><title>{title} - Universal Research Assistant</title><style>{style}</style></head><body><main><h1>{title}</h1>{nav}{''.join(sections)}</main></body></html>"
 
 
@@ -1528,11 +1744,12 @@ def dashboard_sections() -> List[str]:
     monitors = list_monitors()
     alerts_data = list_alerts(8)
     sections = [
-        "<section><h2>Service Status</h2><p class='ok'>ok</p><p class='muted'>Universal Research Assistant V9 Enterprise Automation Platform</p><p><a class='button' href='/ui/status'>View status</a><a class='button' href='/ui/reports'>Browse reports</a><a class='button' href='/ui/monitors'>View monitors</a></p></section>",
+        "<section><h2>Service Status</h2><p class='ok'>ok</p><p class='muted'>Universal Research Assistant V10 Enterprise AI Research Agent</p><p><a class='button' href='/ui/research'>Run research</a><a class='button' href='/ui/workflows'>View workflows</a><a class='button' href='/ui/templates'>View templates</a><a class='button' href='/ui/reports'>Browse reports</a></p></section>",
         source_status_table(),
         report_table(reports, "Recent Reports"),
         monitor_table(monitors[:10], "Monitors"),
         alert_table(alerts_data, "Recent Alerts"),
+        workflow_table(list_workflows(8), "Recent Workflows"),
         scheduler_table(),
         "<section><h2>Quick API Links</h2><p><a class='button' href='/health'>Health JSON</a><a class='button' href='/sources'>Sources JSON</a><a class='button' href='/reports'>Reports JSON</a><a class='button' href='/mcp/manifest'>MCP Manifest</a></p></section>",
     ]
@@ -1541,7 +1758,7 @@ def dashboard_sections() -> List[str]:
 
 def status_sections() -> List[str]:
     return [
-        "<section><h2>Service</h2><table><tr><th>Status</th><td class='ok'>ok</td></tr><tr><th>Version</th><td>9.0.0</td></tr><tr><th>AI</th><td>optional; deterministic fallback enabled</td></tr></table></section>",
+        "<section><h2>Service</h2><table><tr><th>Status</th><td class='ok'>ok</td></tr><tr><th>Version</th><td>10.0.0</td></tr><tr><th>AI</th><td>optional; deterministic fallback enabled</td></tr></table></section>",
         scheduler_table(),
         source_status_table(),
     ]
@@ -1555,6 +1772,23 @@ def reports_sections() -> List[str]:
 
 def monitors_sections() -> List[str]:
     return [monitor_table(list_monitors(), "Saved Monitors")]
+
+
+def research_sections() -> List[str]:
+    return [
+        "<section><h2>Unified Research Workflow</h2><p>Authenticated API clients can plan, search permitted public sources, normalize, deduplicate, filter, rank, analyze, report, save, and export a traceable workflow through <code>POST /research/run</code>.</p><p class='muted'>AI providers are optional. Deterministic analysis remains available when providers are unavailable.</p></section>",
+        template_table(list_templates(), "Available Templates"),
+        workflow_table(list_workflows(10), "Recent Workflows"),
+        report_table(recent_reports(10), "Recent Downloads"),
+    ]
+
+
+def workflow_sections() -> List[str]:
+    return [workflow_table(list_workflows(100), "Saved Workflows")]
+
+
+def template_sections() -> List[str]:
+    return [template_table(list_templates(), "Available Templates")]
 
 
 def source_status_table() -> str:
@@ -1593,6 +1827,24 @@ def alert_table(alerts_data: List[Dict[str, Any]], title: str) -> str:
         for item in alerts_data
     )
     return f"<section><h2>{title}</h2><table><tr><th>Created</th><th>Monitor</th><th>Rule</th><th>Severity</th><th>Message</th></tr>{rows}</table></section>"
+
+
+def workflow_table(workflows: List[Dict[str, Any]], title: str) -> str:
+    if not workflows:
+        return f"<section><h2>{title}</h2><p class='muted'>No workflows found.</p></section>"
+    rows = "".join(
+        f"<tr><td>{item.get('started_at', '')}</td><td>{item.get('topic', '')}</td><td>{item.get('status', '')}</td><td>{item.get('result_count', 0)}</td><td>{len(item.get('warnings', []))}</td></tr>"
+        for item in workflows
+    )
+    return f"<section><h2>{title}</h2><table><tr><th>Started</th><th>Topic</th><th>Status</th><th>Results</th><th>Warnings</th></tr>{rows}</table></section>"
+
+
+def template_table(templates: List[Dict[str, Any]], title: str) -> str:
+    rows = "".join(
+        f"<tr><td>{item.get('id', '')}</td><td>{item.get('name', '')}</td><td>{item.get('description', '')}</td><td>{', '.join(item.get('sources', []))}</td></tr>"
+        for item in templates
+    )
+    return f"<section><h2>{title}</h2><table><tr><th>ID</th><th>Name</th><th>Description</th><th>Sources</th></tr>{rows}</table></section>"
 
 
 def scheduler_table() -> str:
@@ -1737,7 +1989,21 @@ async def run_search_pipeline(request: ResearchRequest) -> Dict[str, Any]:
         "sources": selected_sources,
         "warnings": unique_strings(warnings),
         "results": summarized,
+        "raw_result_count": len(raw_results),
+        "filtered_result_count": len(filtered),
+        "deduped_result_count": len(deduped),
     }
+
+
+async def run_research_workflow(request: ResearchWorkflowRequest) -> Dict[str, Any]:
+    """Run the V10 orchestration layer without changing V9 search semantics."""
+    return await run_workflow(
+        request.model_dump(),
+        AnalysisRequest,
+        run_search_pipeline,
+        build_analysis_response,
+        maybe_enhance_analysis,
+    )
 
 
 def build_analysis_response(request: AnalysisRequest, pipeline: Dict[str, Any]) -> AnalysisResponse:

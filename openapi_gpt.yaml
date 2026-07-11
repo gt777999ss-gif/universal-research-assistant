@@ -443,8 +443,8 @@ paths:
   /research/run-template:
     post:
       summary: Run an existing research template by exact template ID
-      description: Call listResearchTemplates when availability is unknown. If the
-        exact ID appears, run it immediately. For ai_video_weekly send {"template":"ai_video_weekly"}.
+      description: Call listResearchTemplates first when availability is unknown.
+        If the exact ID appears, run it immediately. For ai_video_weekly send {"template":"ai_video_weekly"}.
         Do not request confirmation when explicitly asked. Requires the X-API-Key
         header.
       operationId: runResearchTemplate

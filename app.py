@@ -1092,7 +1092,7 @@ async def research_templates() -> ResearchTemplatesResponse:
     operation_id="runResearchTemplate",
     summary="Run an existing research template by exact template ID",
     description=(
-        "Call listResearchTemplates when availability is unknown. If the exact ID appears, run it immediately. "
+        "Call listResearchTemplates first when availability is unknown. If the exact ID appears, run it immediately. "
         "For ai_video_weekly send {\"template\":\"ai_video_weekly\"}. Do not request confirmation when explicitly asked. "
         "Requires the X-API-Key header."
     ),

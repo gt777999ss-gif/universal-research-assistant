@@ -230,6 +230,23 @@ Enable YouTube search by creating a YouTube Data API key in Google Cloud and set
 export YOUTUBE_API_KEY="..."
 ```
 
+### YouTube Diagnostics
+
+Enable **YouTube Data API v3** for the Google Cloud project that owns `YOUTUBE_API_KEY`, then run a sanitized local check:
+
+```bash
+python3 scripts/test_youtube_source.py --query "Google Veo"
+```
+
+The script never prints the API key. It reports whether the variable is configured, the result count, and safe error categories. Common failures are:
+
+- HTTP 400: an invalid request parameter, often an empty query or malformed locale.
+- HTTP 403 `accessNotConfigured`: YouTube Data API v3 is not enabled for the key's Google Cloud project.
+- HTTP 403 `keyInvalid`: the key is invalid, restricted incorrectly, or unavailable to the deployment.
+- HTTP 403 `quotaExceeded`: the project quota is exhausted.
+
+The `ai_video_weekly` workflow records a YouTube source warning and continues with other sources when YouTube is unavailable.
+
 Enable X/Twitter search by creating an official X API bearer token and setting:
 
 ```bash

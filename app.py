@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from html import escape as html_escape
 from datetime import datetime, timedelta
@@ -33,6 +34,7 @@ from analyzers.risk_analyzer import analyze_risks
 from analyzers.theme_extractor import cluster_similar_stories, extract_themes, source_breakdown
 from analyzers.trend_analyzer import analyze_trends
 from collectors import COLLECTORS
+from collectors.youtube_collector import youtube_configuration_status
 from exporters.csv_exporter import export_csv
 from exporters.report_exporter import export_report
 from models import SearchResult
@@ -75,6 +77,7 @@ AIProviderName = Literal["auto", "gemini", "openai", "none"]
 ReportExportFormat = Literal["markdown", "html", "json", "pdf"]
 DEFAULT_SOURCES: List[SourceName] = ["google_news", "web"]
 ALL_SOURCES: List[SourceName] = ["google_news", "reddit", "youtube", "x", "tiktok", "rss", "web", "manual_csv"]
+LOGGER = logging.getLogger(__name__)
 
 
 class HealthResponse(BaseModel):
@@ -761,6 +764,7 @@ app = FastAPI(
 async def start_monitor_scheduler() -> None:
     global scheduler_instance, automation_scheduler_instance
     scheduler_instance = MonitorScheduler(run_monitor_job)
+    LOGGER.info("YouTube startup diagnostic: %s", youtube_configuration_status()["message"])
     asyncio.create_task(scheduler_instance.loop_forever())
     automation_scheduler_instance = AutomationScheduler(automation_tick_once)
     asyncio.create_task(automation_scheduler_instance.loop_forever())

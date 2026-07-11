@@ -69,14 +69,14 @@ from research_workflows.templates import get_template, list_templates
 from scheduler.scheduler import MonitorScheduler
 
 
-SourceName = Literal["youtube", "x", "tiktok", "reddit", "google_news", "rss", "web", "manual_csv"]
+SourceName = Literal["youtube", "x", "tiktok", "reddit", "google_news", "rss", "manual_csv"]
 AnalysisType = Literal["general", "trend", "market", "competitor", "customer_feedback", "risk", "opportunity"]
 MonitorFrequency = Literal["hourly", "daily", "weekly"]
 NotificationChannel = Literal["email", "telegram", "discord", "webhook"]
 AIProviderName = Literal["auto", "gemini", "openai", "none"]
 ReportExportFormat = Literal["markdown", "html", "json", "pdf"]
-DEFAULT_SOURCES: List[SourceName] = ["google_news", "web"]
-ALL_SOURCES: List[SourceName] = ["google_news", "reddit", "youtube", "x", "tiktok", "rss", "web", "manual_csv"]
+DEFAULT_SOURCES: List[SourceName] = ["google_news"]
+ALL_SOURCES: List[SourceName] = ["google_news", "reddit", "youtube", "x", "tiktok", "rss", "manual_csv"]
 LOGGER = logging.getLogger(__name__)
 
 
@@ -100,8 +100,8 @@ class ResearchRequest(BaseModel):
     )
     sources: List[SourceName] = Field(
         default=DEFAULT_SOURCES,
-        description="Sources to search. Defaults to Google News and general web search.",
-        examples=[["google_news", "web"]],
+        description="Sources to search. Defaults to Google News.",
+        examples=[["google_news", "reddit"]],
     )
     days: int = Field(default=30, ge=1, le=365, description="Search recency window in days.")
     limit: int = Field(default=10, ge=1, le=100, description="Maximum number of results to return.")
@@ -249,7 +249,7 @@ class SourcesResponse(BaseModel):
 class MonitorConfig(BaseModel):
     name: str = Field(..., min_length=1, max_length=120, examples=["AI Video"])
     query: str = Field(..., min_length=1, max_length=500, examples=["AI video tools"])
-    sources: List[SourceName] = Field(default=DEFAULT_SOURCES, examples=[["google_news", "reddit", "youtube", "web"]])
+    sources: List[SourceName] = Field(default=DEFAULT_SOURCES, examples=[["google_news", "reddit", "youtube"]])
     analysis_type: AnalysisType = "trend"
     frequency: MonitorFrequency = "daily"
     days: int = Field(default=30, ge=1, le=365)
@@ -560,7 +560,7 @@ class WorkflowDownload(BaseModel):
 class ResearchWorkflowRequest(BaseModel):
     topic: str = Field(..., min_length=1, max_length=500)
     queries: List[str] = Field(default_factory=list)
-    sources: List[SourceName] = Field(default=["google_news", "youtube", "reddit", "rss", "web"])
+    sources: List[SourceName] = Field(default=["google_news", "youtube", "reddit", "rss"])
     days: int = Field(default=7, ge=1, le=365)
     limit_per_source: int = Field(default=20, ge=1, le=50)
     language: str = Field(default="any", min_length=2, max_length=20)
@@ -1719,7 +1719,7 @@ async def agent_briefing(request: AgentBriefingRequest) -> AgentBriefingResponse
                             "summary": "Recent public discussions",
                             "value": {
                                 "query": "Find recent public discussions about AI search tools",
-                                "sources": ["google_news", "web"],
+                                "sources": ["google_news", "reddit"],
                                 "days": 30,
                                 "limit": 10,
                                 "language": "any",
@@ -2549,14 +2549,6 @@ def source_status(source: SourceName) -> SourceStatus:
     if source == "x":
         configured = bool(os.getenv("X_BEARER_TOKEN"))
         return SourceStatus(name=source, available=configured, requires_api_key=True, configured=configured)
-    if source == "web":
-        return SourceStatus(
-            name=source,
-            available=True,
-            requires_api_key=False,
-            configured=True,
-            note="Web collector compatibility source. No external web search provider is configured.",
-        )
     if source == "reddit":
         configured = bool(os.getenv("REDDIT_CLIENT_ID", "").strip() and os.getenv("REDDIT_CLIENT_SECRET", "").strip())
         return SourceStatus(

@@ -2169,7 +2169,7 @@
                     "query": "Find recent public discussions about AI search tools",
                     "sources": [
                       "google_news",
-                      "web"
+                      "reddit"
                     ],
                     "days": 30,
                     "limit": 10,
@@ -2736,15 +2736,13 @@
                 "reddit",
                 "google_news",
                 "rss",
-                "web",
                 "manual_csv"
               ]
             },
             "type": "array",
             "title": "Sources",
             "default": [
-              "google_news",
-              "web"
+              "google_news"
             ]
           },
           "days": {
@@ -2851,15 +2849,13 @@
                 "reddit",
                 "google_news",
                 "rss",
-                "web",
                 "manual_csv"
               ]
             },
             "type": "array",
             "title": "Sources",
             "default": [
-              "google_news",
-              "web"
+              "google_news"
             ]
           }
         },
@@ -2961,15 +2957,13 @@
                 "reddit",
                 "google_news",
                 "rss",
-                "web",
                 "manual_csv"
               ]
             },
             "type": "array",
             "title": "Sources",
             "default": [
-              "google_news",
-              "web"
+              "google_news"
             ]
           },
           "timeframe_days": {
@@ -3096,15 +3090,13 @@
                 "reddit",
                 "google_news",
                 "rss",
-                "web",
                 "manual_csv"
               ]
             },
             "type": "array",
             "title": "Sources",
             "default": [
-              "google_news",
-              "web"
+              "google_news"
             ]
           },
           "days": {
@@ -3387,21 +3379,19 @@
                 "reddit",
                 "google_news",
                 "rss",
-                "web",
                 "manual_csv"
               ]
             },
             "type": "array",
             "title": "Sources",
-            "description": "Sources to search. Defaults to Google News and general web search.",
+            "description": "Sources to search. Defaults to Google News.",
             "default": [
-              "google_news",
-              "web"
+              "google_news"
             ],
             "examples": [
               [
                 "google_news",
-                "web"
+                "reddit"
               ]
             ]
           },
@@ -4293,15 +4283,13 @@
                 "reddit",
                 "google_news",
                 "rss",
-                "web",
                 "manual_csv"
               ]
             },
             "type": "array",
             "title": "Sources",
             "default": [
-              "google_news",
-              "web"
+              "google_news"
             ]
           },
           "days": {
@@ -4668,22 +4656,19 @@
                 "reddit",
                 "google_news",
                 "rss",
-                "web",
                 "manual_csv"
               ]
             },
             "type": "array",
             "title": "Sources",
             "default": [
-              "google_news",
-              "web"
+              "google_news"
             ],
             "examples": [
               [
                 "google_news",
                 "reddit",
-                "youtube",
-                "web"
+                "youtube"
               ]
             ]
           },
@@ -4846,22 +4831,19 @@
                 "reddit",
                 "google_news",
                 "rss",
-                "web",
                 "manual_csv"
               ]
             },
             "type": "array",
             "title": "Sources",
             "default": [
-              "google_news",
-              "web"
+              "google_news"
             ],
             "examples": [
               [
                 "google_news",
                 "reddit",
-                "youtube",
-                "web"
+                "youtube"
               ]
             ]
           },
@@ -5055,7 +5037,6 @@
                     "reddit",
                     "google_news",
                     "rss",
-                    "web",
                     "manual_csv"
                   ]
                 },
@@ -5401,21 +5382,19 @@
                 "reddit",
                 "google_news",
                 "rss",
-                "web",
                 "manual_csv"
               ]
             },
             "type": "array",
             "title": "Sources",
-            "description": "Sources to search. Defaults to Google News and general web search.",
+            "description": "Sources to search. Defaults to Google News.",
             "default": [
-              "google_news",
-              "web"
+              "google_news"
             ],
             "examples": [
               [
                 "google_news",
-                "web"
+                "reddit"
               ]
             ]
           },
@@ -5749,7 +5728,6 @@
                 "reddit",
                 "google_news",
                 "rss",
-                "web",
                 "manual_csv"
               ]
             },
@@ -5827,7 +5805,6 @@
                 "reddit",
                 "google_news",
                 "rss",
-                "web",
                 "manual_csv"
               ]
             },
@@ -5837,8 +5814,7 @@
               "google_news",
               "youtube",
               "reddit",
-              "rss",
-              "web"
+              "rss"
             ]
           },
           "days": {
@@ -6136,21 +6112,19 @@
                 "reddit",
                 "google_news",
                 "rss",
-                "web",
                 "manual_csv"
               ]
             },
             "type": "array",
             "title": "Sources",
-            "description": "Sources to search. Defaults to Google News and general web search.",
+            "description": "Sources to search. Defaults to Google News.",
             "default": [
-              "google_news",
-              "web"
+              "google_news"
             ],
             "examples": [
               [
                 "google_news",
-                "web"
+                "reddit"
               ]
             ]
           },
@@ -6440,7 +6414,6 @@
               "reddit",
               "google_news",
               "rss",
-              "web",
               "manual_csv"
             ],
             "title": "Name"
@@ -6537,15 +6510,13 @@
                 "reddit",
                 "google_news",
                 "rss",
-                "web",
                 "manual_csv"
               ]
             },
             "type": "array",
             "title": "Sources",
             "default": [
-              "google_news",
-              "web"
+              "google_news"
             ]
           },
           "frequency": {

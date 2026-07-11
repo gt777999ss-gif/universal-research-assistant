@@ -50,7 +50,7 @@ V10 adds a local-first unified workflow API. `POST /research/run` executes these
 {
   "topic": "AI video tools",
   "queries": ["Google Veo latest updates", "Runway latest updates", "Kling AI latest updates"],
-  "sources": ["google_news", "youtube", "reddit", "rss", "web"],
+  "sources": ["google_news", "youtube", "reddit", "rss"],
   "days": 7,
   "limit_per_source": 20,
   "use_ai": false,
@@ -127,7 +127,7 @@ Deterministic reports distinguish verified source facts, deterministic interpret
 - Monitoring Center API through `GET /monitors`, `POST /monitors`, `PUT /monitors/{id}`, and `DELETE /monitors/{id}`.
 - Monitor jobs can be created, edited, deleted, enabled, and disabled.
 - Scheduler supports hourly, daily, and weekly frequencies.
-- Monitor targets include Google News, Reddit, YouTube, RSS, and web pages when the relevant collectors are configured.
+- Monitor targets include Google News, Reddit, YouTube, and RSS when the relevant collectors are configured.
 - Saved searches are stored inside monitor definitions.
 - Alert rules support new keywords, trend spikes, source updates, and competitor mentions.
 - Recent alerts are available through `GET /alerts`.
@@ -145,7 +145,6 @@ Each source has its own collector module and returns a common `SearchResult` mod
 | `x` | `collectors/x_collector.py` | Uses the official X API when `X_BEARER_TOKEN` is configured. |
 | `tiktok` | `collectors/tiktok_public_collector.py` | Placeholder for public/official/licensed TikTok data only; no login scraping. |
 | `rss` | `collectors/rss_collector.py` | Uses public RSS feed URLs. |
-| `web` | `collectors/web_search_collector.py` | Compatibility source reserved for future legal public web providers; no external web search provider is configured. |
 | `manual_csv` | `collectors/manual_csv_collector.py` | Optional public-data CSV import. |
 
 Results are merged, filtered for spam/ads/irrelevance, deduplicated by URL and similar titles, then sorted by relevance and recency. Missing optional API keys produce warnings instead of request failures.
@@ -353,7 +352,7 @@ curl -X POST http://127.0.0.1:8000/search \
 - Searches selected public sources.
 - Supports `query`, `queries`, `sources`, `days`, `language`, `country`, and `limit`.
 - Provide either `query` or `queries`.
-- Defaults are `sources: ["google_news", "web"]`, `days: 30`, `limit: 10`, `language: "any"`, and `country: "any"`.
+- Defaults are `sources: ["google_news"]`, `days: 30`, `limit: 10`, `language: "any"`, and `country: "any"`.
 - Optional `include_analysis: true` adds a lightweight analysis summary to the search response.
 
 Single-query request:
@@ -361,7 +360,7 @@ Single-query request:
 ```json
 {
   "query": "natural language search request",
-  "sources": ["youtube", "x", "tiktok", "reddit", "google_news", "web"],
+  "sources": ["youtube", "x", "tiktok", "reddit", "google_news", "rss"],
   "days": 30,
   "limit": 10,
   "language": "any",
@@ -378,7 +377,7 @@ Batch request:
     "AI agent tools",
     "TikTok Shop Thailand pet products"
   ],
-  "sources": ["google_news", "reddit", "youtube", "web"],
+  "sources": ["google_news", "reddit", "youtube", "rss"],
   "days": 30,
   "limit": 20
 }
@@ -431,7 +430,7 @@ curl -X POST http://127.0.0.1:8000/analyze \
   -H "X-API-Key: local-dev-secret" \
   -d '{
     "query": "AI video tools",
-    "sources": ["google_news", "reddit", "youtube", "web"],
+    "sources": ["google_news", "reddit", "youtube", "rss"],
     "days": 30,
     "limit": 20,
     "analysis_type": "trend",
@@ -459,7 +458,7 @@ curl -X POST http://127.0.0.1:8000/report \
   -H "X-API-Key: local-dev-secret" \
   -d '{
     "query": "AI video tools",
-    "sources": ["google_news", "web"],
+    "sources": ["google_news"],
     "limit": 20,
     "export_markdown": true
   }'
@@ -488,7 +487,7 @@ curl -X POST http://127.0.0.1:8000/batch \
       {
         "query": "TikTok Shop Thailand pet products",
         "analysis_type": "market",
-        "sources": ["google_news", "web", "reddit"],
+        "sources": ["google_news", "reddit"],
         "days": 30,
         "limit": 20
       }
@@ -523,7 +522,7 @@ curl -X POST http://127.0.0.1:8000/monitor/create \
   -d '{
     "name": "AI Video",
     "query": "AI video tools",
-    "sources": ["google_news", "reddit", "youtube", "web"],
+    "sources": ["google_news", "reddit", "youtube", "rss"],
     "analysis_type": "trend",
     "frequency": "daily",
     "days": 30,
@@ -579,7 +578,7 @@ Example:
 {
   "name": "AI Video Monitor",
   "query": "AI video tools",
-  "sources": ["google_news", "reddit", "youtube", "web"],
+  "sources": ["google_news", "reddit", "youtube", "rss"],
   "frequency": "daily",
   "enabled": true,
   "saved_searches": ["AI video tools", "Runway updates"],
@@ -666,7 +665,7 @@ curl -X POST http://127.0.0.1:8000/report/export \
   -H "X-API-Key: local-dev-secret" \
   -d '{
     "query": "AI video tools",
-    "sources": ["google_news", "web"],
+  "sources": ["google_news"],
     "limit": 10,
     "format": "html",
     "use_ai": false
@@ -752,7 +751,7 @@ curl -X POST http://127.0.0.1:8000/agent/plan \
   -d '{
     "goal": "Monitor AI video generation tools and summarize important changes",
     "topics": ["Runway", "Google Veo", "Pika", "Kling AI", "OpenAI video"],
-    "sources": ["google_news", "reddit", "youtube", "web"],
+    "sources": ["google_news", "reddit", "youtube", "rss"],
     "timeframe_days": 30,
     "output_language": "auto"
   }'
@@ -775,7 +774,7 @@ Example:
   "name": "AI Video Watch",
   "goal": "Track major AI video generation tool updates",
   "topics": ["Runway", "Google Veo", "Pika", "Kling AI", "OpenAI video"],
-  "sources": ["google_news", "reddit", "youtube", "web"],
+    "sources": ["google_news", "reddit", "youtube", "rss"],
   "frequency": "daily",
   "analysis_type": "trend",
   "enabled": true
@@ -883,7 +882,7 @@ Run batch research for AI video tools and AI agent tools, then summarize trends 
 ```
 
 ```text
-Create a daily monitor for AI video tools using Google News, Reddit, YouTube, and web.
+Create a daily monitor for AI video tools using Google News, Reddit, YouTube, and RSS.
 ```
 
 ```text

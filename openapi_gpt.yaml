@@ -55,7 +55,7 @@ paths:
                   query: Find recent public discussions about AI search tools
                   sources:
                   - google_news
-                  - web
+                  - reddit
                   days: 30
                   limit: 10
                   language: any
@@ -710,13 +710,11 @@ components:
             - reddit
             - google_news
             - rss
-            - web
             - manual_csv
           type: array
           title: Sources
           default:
           - google_news
-          - web
         days:
           type: integer
           maximum: 365.0
@@ -799,13 +797,11 @@ components:
             - reddit
             - google_news
             - rss
-            - web
             - manual_csv
           type: array
           title: Sources
           default:
           - google_news
-          - web
       type: object
       required:
       - topic
@@ -880,13 +876,11 @@ components:
             - reddit
             - google_news
             - rss
-            - web
             - manual_csv
           type: array
           title: Sources
           default:
           - google_news
-          - web
         timeframe_days:
           type: integer
           maximum: 365.0
@@ -988,13 +982,11 @@ components:
             - reddit
             - google_news
             - rss
-            - web
             - manual_csv
           type: array
           title: Sources
           default:
           - google_news
-          - web
         days:
           type: integer
           maximum: 365.0
@@ -1209,18 +1201,15 @@ components:
             - reddit
             - google_news
             - rss
-            - web
             - manual_csv
           type: array
           title: Sources
-          description: Sources to search. Defaults to Google News and general web
-            search.
+          description: Sources to search. Defaults to Google News.
           default:
           - google_news
-          - web
           examples:
           - - google_news
-            - web
+            - reddit
         days:
           type: integer
           maximum: 365.0
@@ -1893,13 +1882,11 @@ components:
             - reddit
             - google_news
             - rss
-            - web
             - manual_csv
           type: array
           title: Sources
           default:
           - google_news
-          - web
         days:
           type: integer
           maximum: 365.0
@@ -2178,18 +2165,15 @@ components:
             - reddit
             - google_news
             - rss
-            - web
             - manual_csv
           type: array
           title: Sources
           default:
           - google_news
-          - web
           examples:
           - - google_news
             - reddit
             - youtube
-            - web
         analysis_type:
           type: string
           enum:
@@ -2320,18 +2304,15 @@ components:
             - reddit
             - google_news
             - rss
-            - web
             - manual_csv
           type: array
           title: Sources
           default:
           - google_news
-          - web
           examples:
           - - google_news
             - reddit
             - youtube
-            - web
         analysis_type:
           type: string
           enum:
@@ -2483,7 +2464,6 @@ components:
               - reddit
               - google_news
               - rss
-              - web
               - manual_csv
             type: array
           - type: 'null'
@@ -2725,18 +2705,15 @@ components:
             - reddit
             - google_news
             - rss
-            - web
             - manual_csv
           type: array
           title: Sources
-          description: Sources to search. Defaults to Google News and general web
-            search.
+          description: Sources to search. Defaults to Google News.
           default:
           - google_news
-          - web
           examples:
           - - google_news
-            - web
+            - reddit
         days:
           type: integer
           maximum: 365.0
@@ -2998,7 +2975,6 @@ components:
             - reddit
             - google_news
             - rss
-            - web
             - manual_csv
           type: array
           title: Sources
@@ -3058,7 +3034,6 @@ components:
             - reddit
             - google_news
             - rss
-            - web
             - manual_csv
           type: array
           title: Sources
@@ -3067,7 +3042,6 @@ components:
           - youtube
           - reddit
           - rss
-          - web
         days:
           type: integer
           maximum: 365.0
@@ -3305,18 +3279,15 @@ components:
             - reddit
             - google_news
             - rss
-            - web
             - manual_csv
           type: array
           title: Sources
-          description: Sources to search. Defaults to Google News and general web
-            search.
+          description: Sources to search. Defaults to Google News.
           default:
           - google_news
-          - web
           examples:
           - - google_news
-            - web
+            - reddit
         days:
           type: integer
           maximum: 365.0
@@ -3529,7 +3500,6 @@ components:
           - reddit
           - google_news
           - rss
-          - web
           - manual_csv
           title: Name
         available:
@@ -3603,13 +3573,11 @@ components:
             - reddit
             - google_news
             - rss
-            - web
             - manual_csv
           type: array
           title: Sources
           default:
           - google_news
-          - web
         frequency:
           type: string
           enum:

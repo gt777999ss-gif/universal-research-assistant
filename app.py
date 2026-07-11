@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import os
+from html import escape as html_escape
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 import yaml
 from fastapi import Depends, FastAPI, HTTPException, Request, Security, status
@@ -515,6 +516,22 @@ class ReportsByDateResponse(BaseModel):
     reports: List[ReportFileItem] = Field(default_factory=list)
 
 
+class ReportReaderResponse(BaseModel):
+    workflow_id: str
+    template: str = ""
+    topic: str = ""
+    generated_at: str = ""
+    markdown: str = ""
+    html: str = ""
+    json_content: Dict[str, Any] = Field(default_factory=dict, alias="json")
+    download_urls: List[str] = Field(default_factory=list)
+
+
+class ReportDownloadResponse(BaseModel):
+    workflow_id: str
+    download_urls: List[str] = Field(default_factory=list)
+
+
 class MCPManifestResponse(BaseModel):
     name: str
     version: str
@@ -872,15 +889,95 @@ async def reports_index() -> ReportsIndexResponse:
 
 
 @app.get(
-    "/reports/{date}",
-    response_model=ReportsByDateResponse,
-    operation_id="listReportsByDate",
-    summary="List reports for a date",
-    description="Public endpoint listing Markdown, HTML, and JSON reports for one date.",
+    "/reports/latest",
+    response_model=ReportReaderResponse,
+    operation_id="getLatestReport",
+    summary="Read the latest generated workflow report",
+    description="Public endpoint returning the latest saved workflow report from reports/YYYY-MM-DD/.",
     openapi_extra={"security": []},
 )
-async def reports_by_date(date: str) -> ReportsByDateResponse:
-    return ReportsByDateResponse(date=date, reports=[ReportFileItem(**item) for item in reports_for_date(date)])
+async def reports_latest() -> ReportReaderResponse:
+    for workflow in list_workflows(200):
+        try:
+            return ReportReaderResponse(**read_workflow_report(workflow))
+        except FileNotFoundError:
+            continue
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No saved workflow report was found.")
+
+
+@app.get(
+    "/reports/{workflow_id}/markdown",
+    response_class=HTMLResponse,
+    operation_id="getWorkflowReportMarkdown",
+    summary="Read workflow report Markdown",
+    description="Public endpoint returning saved Markdown report content.",
+    openapi_extra={"security": []},
+)
+async def workflow_report_markdown(workflow_id: str) -> HTMLResponse:
+    content = read_workflow_report_by_id(workflow_id)["markdown"]
+    if not content:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved Markdown report not found.")
+    return HTMLResponse(content=content, media_type="text/markdown")
+
+
+@app.get(
+    "/reports/{workflow_id}/html",
+    response_class=HTMLResponse,
+    operation_id="getWorkflowReportHtml",
+    summary="Read workflow report HTML",
+    description="Public endpoint returning the saved HTML report content.",
+    openapi_extra={"security": []},
+)
+async def workflow_report_html(workflow_id: str) -> HTMLResponse:
+    content = read_workflow_report_by_id(workflow_id)["html"]
+    if not content:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved HTML report not found.")
+    return HTMLResponse(content=content)
+
+
+@app.get(
+    "/reports/{workflow_id}/json",
+    response_model=Dict[str, Any],
+    operation_id="getWorkflowReportJson",
+    summary="Read workflow report JSON",
+    description="Public endpoint returning the saved JSON report content.",
+    openapi_extra={"security": []},
+)
+async def workflow_report_json(workflow_id: str) -> Dict[str, Any]:
+    payload = read_workflow_report_by_id(workflow_id)["json"]
+    if not payload:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved JSON report not found.")
+    return payload
+
+
+@app.get(
+    "/reports/{workflow_id}/download",
+    response_model=ReportDownloadResponse,
+    operation_id="getWorkflowReportDownloads",
+    summary="Get workflow report download URLs",
+    description="Public endpoint listing download URLs for saved report formats.",
+    openapi_extra={"security": []},
+)
+async def workflow_report_downloads(workflow_id: str) -> ReportDownloadResponse:
+    report = read_workflow_report_by_id(workflow_id)
+    return ReportDownloadResponse(workflow_id=workflow_id, download_urls=report["download_urls"])
+
+
+@app.get(
+    "/reports/{workflow_id}",
+    response_model=Union[ReportReaderResponse, ReportsByDateResponse],
+    operation_id="getWorkflowReport",
+    summary="Read report metadata for a workflow",
+    description="Public endpoint returning saved report metadata and content for a workflow ID. Existing YYYY-MM-DD date values continue to return the legacy report-date listing.",
+    openapi_extra={"security": []},
+)
+async def workflow_report(workflow_id: str):
+    workflow = get_workflow(workflow_id)
+    if workflow:
+        return ReportReaderResponse(**read_workflow_report(workflow))
+    if is_report_date(workflow_id):
+        return ReportsByDateResponse(date=workflow_id, reports=[ReportFileItem(**item) for item in reports_for_date(workflow_id)])
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow report not found.")
 
 
 @app.get(
@@ -1179,6 +1276,14 @@ async def ui_automation_runs() -> HTMLResponse:
 @app.get("/ui/alerts", response_class=HTMLResponse, operation_id="getUIAlertBrowser", openapi_extra={"security": []})
 async def ui_alerts() -> HTMLResponse:
     return HTMLResponse(build_ui_page("Alerts", [alert_table(list_alerts(100), "Recent Alerts")]))
+
+
+@app.get("/ui/report/{workflow_id}", response_class=HTMLResponse, operation_id="getUIWorkflowReport", openapi_extra={"security": []})
+async def ui_workflow_report(workflow_id: str) -> HTMLResponse:
+    report = read_workflow_report_by_id(workflow_id)
+    links = "".join(f"<a class='button' href='{url}'>Download</a>" for url in report["download_urls"])
+    content = f"<section><h2>{html_escape(report['topic'])}</h2><p class='muted'>Generated: {html_escape(report['generated_at'])}</p><p>{links}</p><pre>{html_escape(report['markdown'])}</pre></section>"
+    return HTMLResponse(build_ui_page("Report", [content]))
 
 
 @app.get(
@@ -2245,6 +2350,57 @@ async def run_research_workflow(request: ResearchWorkflowRequest) -> Dict[str, A
         build_analysis_response,
         maybe_enhance_analysis,
     )
+
+
+def read_workflow_report_by_id(workflow_id: str) -> Dict[str, Any]:
+    workflow = get_workflow(workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow report not found.")
+    try:
+        return read_workflow_report(workflow)
+    except FileNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved workflow report files were not found.")
+
+
+def read_workflow_report(workflow: Dict[str, Any]) -> Dict[str, Any]:
+    files: Dict[str, Path] = {}
+    report_root = Path("reports").resolve()
+    for item in workflow.get("downloads", []):
+        output_format = str(item.get("format", ""))
+        path = Path(str(item.get("path", "")))
+        resolved = path.resolve()
+        if output_format and report_root in resolved.parents and resolved.is_file():
+            files[output_format] = resolved
+    if not files:
+        raise FileNotFoundError("No saved report files for workflow.")
+    json_payload: Dict[str, Any] = {}
+    if "json" in files:
+        try:
+            import json
+            json_payload = json.loads(files["json"].read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            json_payload = {}
+    markdown = files["markdown"].read_text(encoding="utf-8") if "markdown" in files else ""
+    html = files["html"].read_text(encoding="utf-8") if "html" in files else ""
+    request = workflow.get("request", {})
+    return {
+        "workflow_id": workflow["workflow_id"],
+        "template": request.get("template_name", ""),
+        "topic": workflow.get("topic", ""),
+        "generated_at": workflow.get("report", {}).get("generated_at") or workflow.get("completed_at", ""),
+        "markdown": markdown,
+        "html": html,
+        "json": json_payload,
+        "download_urls": [str(item.get("download_url", "")) for item in workflow.get("downloads", []) if item.get("download_url") and str(item.get("format", "")) in files],
+    }
+
+
+def is_report_date(value: str) -> bool:
+    try:
+        datetime.strptime(value, "%Y-%m-%d")
+        return True
+    except ValueError:
+        return False
 
 
 async def automation_workflow_runner(spec: Dict[str, Any]) -> Dict[str, Any]:

@@ -21,14 +21,14 @@ INCLUDED_OPERATIONS: Tuple[Tuple[str, str], ...] = (
     ("/analyze", "post"),
     ("/report", "post"),
     ("/report/export", "post"),
-    ("/batch", "post"),
-    ("/monitors", "get"),
-    ("/monitors", "post"),
-    ("/monitors/{id}", "put"),
-    ("/monitors/{id}", "delete"),
-    ("/monitor/run", "post"),
     ("/alerts", "get"),
     ("/reports", "get"),
+    ("/reports/latest", "get"),
+    ("/reports/{workflow_id}", "get"),
+    ("/reports/{workflow_id}/markdown", "get"),
+    ("/reports/{workflow_id}/html", "get"),
+    ("/reports/{workflow_id}/json", "get"),
+    ("/reports/{workflow_id}/download", "get"),
     ("/research/run", "post"),
     ("/research/workflows", "get"),
     ("/research/workflows/{workflow_id}", "get"),
@@ -100,7 +100,7 @@ def build_gpt_openapi() -> Dict[str, Any]:
             "description": "Production server",
         }
     ]
-    filtered["info"]["title"] = "Universal Research Assistant V11 GPT Actions API"
+    filtered["info"]["title"] = "Universal Research Assistant V12 GPT Actions API"
     filtered["info"]["description"] = (
         "ChatGPT Actions optimized OpenAPI specification for the Universal Research Assistant. "
         "This reduced schema keeps the most important public information research, agent, monitoring, "

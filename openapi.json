@@ -3,7 +3,7 @@
   "info": {
     "title": "Universal Public Information Research Assistant",
     "description": "Universal public information research assistant. It searches permitted public sources, filters spam and duplicates, ranks relevant results, and returns clean JSON. It does not recommend products, suppliers, purchases, or sales strategies unless explicitly asked.",
-    "version": "11.0.0"
+    "version": "12.0.0"
   },
   "servers": [
     {
@@ -128,19 +128,121 @@
         "security": []
       }
     },
-    "/reports/{date}": {
+    "/reports/latest": {
       "get": {
-        "summary": "List reports for a date",
-        "description": "Public endpoint listing Markdown, HTML, and JSON reports for one date.",
-        "operationId": "listReportsByDate",
+        "summary": "Read the latest generated workflow report",
+        "description": "Public endpoint returning the latest saved workflow report from reports/YYYY-MM-DD/.",
+        "operationId": "getLatestReport",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportReaderResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/reports/{workflow_id}/markdown": {
+      "get": {
+        "summary": "Read workflow report Markdown",
+        "description": "Public endpoint returning saved Markdown report content.",
+        "operationId": "getWorkflowReportMarkdown",
         "parameters": [
           {
-            "name": "date",
+            "name": "workflow_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Date"
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/reports/{workflow_id}/html": {
+      "get": {
+        "summary": "Read workflow report HTML",
+        "description": "Public endpoint returning the saved HTML report content.",
+        "operationId": "getWorkflowReportHtml",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/reports/{workflow_id}/json": {
+      "get": {
+        "summary": "Read workflow report JSON",
+        "description": "Public endpoint returning the saved JSON report content.",
+        "operationId": "getWorkflowReportJson",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
             }
           }
         ],
@@ -150,7 +252,99 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReportsByDateResponse"
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Getworkflowreportjson"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/reports/{workflow_id}/download": {
+      "get": {
+        "summary": "Get workflow report download URLs",
+        "description": "Public endpoint listing download URLs for saved report formats.",
+        "operationId": "getWorkflowReportDownloads",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportDownloadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/reports/{workflow_id}": {
+      "get": {
+        "summary": "Read report metadata for a workflow",
+        "description": "Public endpoint returning saved report metadata and content for a workflow ID. Existing YYYY-MM-DD date values continue to return the legacy report-date listing.",
+        "operationId": "getWorkflowReport",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReportReaderResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ReportsByDateResponse"
+                    }
+                  ],
+                  "title": "Response Getworkflowreport"
                 }
               }
             }
@@ -1205,6 +1399,46 @@
               "text/html": {
                 "schema": {
                   "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/ui/report/{workflow_id}": {
+      "get": {
+        "summary": "Ui Workflow Report",
+        "operationId": "getUIWorkflowReport",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -5085,6 +5319,26 @@
         ],
         "title": "OpportunityItem"
       },
+      "ReportDownloadResponse": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "download_urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Download Urls"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id"
+        ],
+        "title": "ReportDownloadResponse"
+      },
       "ReportExportRequest": {
         "properties": {
           "query": {
@@ -5311,6 +5565,56 @@
           "type"
         ],
         "title": "ReportFileItem"
+      },
+      "ReportReaderResponse": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "template": {
+            "type": "string",
+            "title": "Template",
+            "default": ""
+          },
+          "topic": {
+            "type": "string",
+            "title": "Topic",
+            "default": ""
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At",
+            "default": ""
+          },
+          "markdown": {
+            "type": "string",
+            "title": "Markdown",
+            "default": ""
+          },
+          "html": {
+            "type": "string",
+            "title": "Html",
+            "default": ""
+          },
+          "json": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json"
+          },
+          "download_urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Download Urls"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id"
+        ],
+        "title": "ReportReaderResponse"
       },
       "ReportResponse": {
         "properties": {

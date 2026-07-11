@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Universal Research Assistant V11 GPT Actions API",
+    "title": "Universal Research Assistant V12 GPT Actions API",
     "description": "ChatGPT Actions optimized OpenAPI specification for the Universal Research Assistant. This reduced schema keeps the most important public information research, agent, monitoring, reporting, and MCP wrapper operations under the ChatGPT Actions operation limit.",
-    "version": "11.0.0"
+    "version": "12.0.0"
   },
   "servers": [
     {
@@ -257,269 +257,6 @@
         ]
       }
     },
-    "/batch": {
-      "post": {
-        "summary": "Run multiple research analysis tasks",
-        "description": "Runs multiple public information research tasks and returns concise deterministic analysis summaries.",
-        "operationId": "batchResearchTasks",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BatchRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BatchResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/monitors": {
-      "get": {
-        "summary": "List monitor jobs",
-        "description": "Lists saved monitor jobs for the monitoring center. Requires the X-API-Key header.",
-        "operationId": "listEnterpriseMonitors",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MonitorListResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      },
-      "post": {
-        "summary": "Create a monitor job",
-        "description": "Creates a saved monitor job with optional saved searches and alert rules. Requires the X-API-Key header.",
-        "operationId": "createEnterpriseMonitor",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MonitorConfig"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Monitor"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
-    "/monitors/{id}": {
-      "put": {
-        "summary": "Edit, enable, or disable a monitor job",
-        "description": "Updates monitor configuration. Set enabled true or false to enable/disable jobs. Requires the X-API-Key header.",
-        "operationId": "updateEnterpriseMonitor",
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MonitorUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Monitor"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "summary": "Delete a monitor job",
-        "description": "Deletes one monitor job. Requires the X-API-Key header.",
-        "operationId": "deleteEnterpriseMonitor",
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "title": "Response Deleteenterprisemonitor",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/monitor/run": {
-      "post": {
-        "summary": "Run monitors manually",
-        "description": "Runs one monitor by ID or all due enabled monitors. Requires the X-API-Key header.",
-        "operationId": "runMonitors",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MonitorRunRequest",
-                "default": {
-                  "force": true
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MonitorRunResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ]
-      }
-    },
     "/alerts": {
       "get": {
         "summary": "List recent alerts",
@@ -556,6 +293,246 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ReportsIndexResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/reports/latest": {
+      "get": {
+        "summary": "Read the latest generated workflow report",
+        "description": "Public endpoint returning the latest saved workflow report from reports/YYYY-MM-DD/.",
+        "operationId": "getLatestReport",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportReaderResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/reports/{workflow_id}": {
+      "get": {
+        "summary": "Read report metadata for a workflow",
+        "description": "Public endpoint returning saved report metadata and content for a workflow ID. Existing YYYY-MM-DD date values continue to return the legacy report-date listing.",
+        "operationId": "getWorkflowReport",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReportReaderResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ReportsByDateResponse"
+                    }
+                  ],
+                  "title": "Response Getworkflowreport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/reports/{workflow_id}/markdown": {
+      "get": {
+        "summary": "Read workflow report Markdown",
+        "description": "Public endpoint returning saved Markdown report content.",
+        "operationId": "getWorkflowReportMarkdown",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/reports/{workflow_id}/html": {
+      "get": {
+        "summary": "Read workflow report HTML",
+        "description": "Public endpoint returning the saved HTML report content.",
+        "operationId": "getWorkflowReportHtml",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/reports/{workflow_id}/json": {
+      "get": {
+        "summary": "Read workflow report JSON",
+        "description": "Public endpoint returning the saved JSON report content.",
+        "operationId": "getWorkflowReportJson",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Getworkflowreportjson",
+                  "properties": {
+                    "data": {
+                      "type": "string",
+                      "description": "Serialized response data."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/reports/{workflow_id}/download": {
+      "get": {
+        "summary": "Get workflow report download URLs",
+        "description": "Public endpoint listing download URLs for saved report formats.",
+        "operationId": "getWorkflowReportDownloads",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportDownloadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -3866,6 +3843,26 @@
         ],
         "title": "OpportunityItem"
       },
+      "ReportDownloadResponse": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "download_urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Download Urls"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id"
+        ],
+        "title": "ReportDownloadResponse"
+      },
       "ReportExportRequest": {
         "properties": {
           "query": {
@@ -4092,6 +4089,61 @@
           "type"
         ],
         "title": "ReportFileItem"
+      },
+      "ReportReaderResponse": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "template": {
+            "type": "string",
+            "title": "Template",
+            "default": ""
+          },
+          "topic": {
+            "type": "string",
+            "title": "Topic",
+            "default": ""
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At",
+            "default": ""
+          },
+          "markdown": {
+            "type": "string",
+            "title": "Markdown",
+            "default": ""
+          },
+          "html": {
+            "type": "string",
+            "title": "Html",
+            "default": ""
+          },
+          "json": {
+            "type": "object",
+            "title": "Json",
+            "properties": {
+              "data": {
+                "type": "string",
+                "description": "Serialized response data."
+              }
+            }
+          },
+          "download_urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Download Urls"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id"
+        ],
+        "title": "ReportReaderResponse"
       },
       "ReportResponse": {
         "properties": {

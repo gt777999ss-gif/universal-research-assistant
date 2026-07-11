@@ -1,8 +1,12 @@
-# Universal AI-Powered Public Information Research Assistant V11 Automation and Notifications
+# Universal AI-Powered Public Information Research Assistant V12 Report Reader
 
 FastAPI backend for public information research, deterministic reporting, optional AI-enhanced analysis, monitoring automation, alert rules, scheduler status, downloadable report exports, HTML dashboard pages, and MCP-compatible wrappers. It is useful without Gemini or OpenAI: if AI keys are missing or invalid, the system falls back to deterministic analysis and still generates reports.
 
 This is not an e-commerce recommendation system. By default it does not recommend products, suppliers, purchases, or selling strategies.
+
+## V12 Report Reader
+
+Saved workflow reports can now be read directly from `reports/YYYY-MM-DD/` through public endpoints: `GET /reports/latest`, `GET /reports/{workflow_id}`, and format-specific Markdown, HTML, JSON, and download URL endpoints. Missing workflows or saved report files return `404`. `GET /ui/report/{workflow_id}` provides a simple browser view. The legacy `GET /reports/{date}` behavior remains available for `YYYY-MM-DD` values.
 
 ## V11 Automation and Notifications
 

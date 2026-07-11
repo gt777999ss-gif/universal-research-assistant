@@ -20,9 +20,11 @@ def configured_env(name: str) -> Optional[str]:
     return value if value else None
 
 
-def http_client() -> httpx.AsyncClient:
+def http_client(extra_headers: Optional[Dict[str, str]] = None) -> httpx.AsyncClient:
     settings = load_settings()
     headers = {"User-Agent": settings["app"].get("user_agent", "universal-research-assistant/1.0")}
+    if extra_headers:
+        headers.update(extra_headers)
     return httpx.AsyncClient(timeout=15, headers=headers, follow_redirects=True)
 
 

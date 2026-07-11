@@ -2554,6 +2554,15 @@ def source_status(source: SourceName) -> SourceStatus:
             configured=configured,
             note="Uses Bing Web Search API when configured.",
         )
+    if source == "reddit":
+        configured = bool(os.getenv("REDDIT_CLIENT_ID", "").strip() and os.getenv("REDDIT_CLIENT_SECRET", "").strip())
+        return SourceStatus(
+            name=source,
+            available=True,
+            requires_api_key=False,
+            configured=configured,
+            note="Uses Reddit OAuth when REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET are configured; otherwise uses a public fallback that may be blocked.",
+        )
     if source == "tiktok":
         return SourceStatus(
             name=source,

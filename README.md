@@ -140,7 +140,7 @@ Each source has its own collector module and returns a common `SearchResult` mod
 | Source ID | Collector | Notes |
 |---|---|---|
 | `google_news` | `collectors/google_news_collector.py` | Uses public Google News RSS. |
-| `reddit` | `collectors/reddit_collector.py` | Uses public Reddit search JSON. |
+| `reddit` | `collectors/reddit_collector.py` | Uses Reddit OAuth when `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET` are configured; public fallback may return 403. |
 | `youtube` | `collectors/youtube_collector.py` | Uses the official YouTube Data API when `YOUTUBE_API_KEY` is configured. |
 | `x` | `collectors/x_collector.py` | Uses the official X API when `X_BEARER_TOKEN` is configured. |
 | `tiktok` | `collectors/tiktok_public_collector.py` | Placeholder for public/official/licensed TikTok data only; no login scraping. |
@@ -201,6 +201,9 @@ Optional source API keys:
 
 ```bash
 YOUTUBE_API_KEY=...
+REDDIT_CLIENT_ID=...
+REDDIT_CLIENT_SECRET=...
+REDDIT_USER_AGENT="python:your-app:1.0 (by /u/your_reddit_username)"
 X_BEARER_TOKEN=...
 BING_SEARCH_API_KEY=...
 ```

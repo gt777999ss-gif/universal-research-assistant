@@ -11,6 +11,9 @@ sources:
     enabled: true
   reddit:
     enabled: true
+    client_id_env: REDDIT_CLIENT_ID
+    client_secret_env: REDDIT_CLIENT_SECRET
+    user_agent_env: REDDIT_USER_AGENT
   web:
     enabled: true
     bing_api_key_env: BING_SEARCH_API_KEY

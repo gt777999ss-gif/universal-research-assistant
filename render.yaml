@@ -12,5 +12,3 @@ services:
         sync: false
       - key: X_BEARER_TOKEN
         sync: false
-      - key: BING_SEARCH_API_KEY
-        sync: false

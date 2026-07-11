@@ -2550,13 +2550,12 @@ def source_status(source: SourceName) -> SourceStatus:
         configured = bool(os.getenv("X_BEARER_TOKEN"))
         return SourceStatus(name=source, available=configured, requires_api_key=True, configured=configured)
     if source == "web":
-        configured = bool(os.getenv("BING_SEARCH_API_KEY"))
         return SourceStatus(
             name=source,
-            available=configured,
-            requires_api_key=True,
-            configured=configured,
-            note="Uses Bing Web Search API when configured.",
+            available=True,
+            requires_api_key=False,
+            configured=True,
+            note="Web collector compatibility source. No external web search provider is configured.",
         )
     if source == "reddit":
         configured = bool(os.getenv("REDDIT_CLIENT_ID", "").strip() and os.getenv("REDDIT_CLIENT_SECRET", "").strip())
@@ -2594,8 +2593,6 @@ def source_warnings(sources_to_check: List[SourceName]) -> List[str]:
             warnings.append("YouTube source unavailable: YOUTUBE_API_KEY is not configured.")
         elif source == "x" and not status_item.configured:
             warnings.append("X source unavailable: X_BEARER_TOKEN is not configured.")
-        elif source == "web" and not status_item.configured:
-            warnings.append("Web source unavailable: BING_SEARCH_API_KEY is not configured.")
         elif source == "tiktok" and not status_item.available:
             warnings.append("TikTok source unavailable: no legal public TikTok search provider is configured.")
     return warnings

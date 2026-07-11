@@ -16,7 +16,6 @@ sources:
     user_agent_env: REDDIT_USER_AGENT
   web:
     enabled: true
-    bing_api_key_env: BING_SEARCH_API_KEY
   x:
     enabled: true
     bearer_token_env: X_BEARER_TOKEN

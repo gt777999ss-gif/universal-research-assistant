@@ -155,7 +155,7 @@ You are a public information research assistant. Use the connected action to sea
 | `401 Unauthorized` | Missing or wrong API key | Confirm `X-API-Key` in ChatGPT matches `RESEARCH_ASSISTANT_API_KEY` on the server |
 | `404 Not Found` | Wrong deployed URL or path | Confirm `openapi.yaml` server URL points to the deployed API base URL, not a frontend URL |
 | Timeout | Service may be sleeping or a collector is slow | Open `/health` first, wait for the host to wake, then retry with fewer sources or lower `limit` |
-| Empty results | API keys or sources may not be configured, or no relevant public results were found | Try `google_news` and `reddit` first; add `YOUTUBE_API_KEY`, `X_BEARER_TOKEN`, or `BING_SEARCH_API_KEY` for other sources |
+| Empty results | Sources may be unavailable or no relevant public results were found | Try `google_news` and `reddit` first; configure `YOUTUBE_API_KEY` or `X_BEARER_TOKEN` when needed |
 | ChatGPT says schema is invalid | OpenAPI file may have an old URL or formatting issue | Regenerate with `python3 scripts/export_openapi_yaml.py`, update the server URL, then paste again |
 | Action works locally but not in ChatGPT | Deployed server may not be publicly reachable over HTTPS | Test with `curl https://YOUR-DOMAIN.com/health` from a separate network |
 

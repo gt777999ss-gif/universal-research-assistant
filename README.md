@@ -145,7 +145,7 @@ Each source has its own collector module and returns a common `SearchResult` mod
 | `x` | `collectors/x_collector.py` | Uses the official X API when `X_BEARER_TOKEN` is configured. |
 | `tiktok` | `collectors/tiktok_public_collector.py` | Placeholder for public/official/licensed TikTok data only; no login scraping. |
 | `rss` | `collectors/rss_collector.py` | Uses public RSS feed URLs. |
-| `web` | `collectors/web_search_collector.py` | Uses Bing Web Search when `BING_SEARCH_API_KEY` is configured. |
+| `web` | `collectors/web_search_collector.py` | Compatibility source reserved for future legal public web providers; no external web search provider is configured. |
 | `manual_csv` | `collectors/manual_csv_collector.py` | Optional public-data CSV import. |
 
 Results are merged, filtered for spam/ads/irrelevance, deduplicated by URL and similar titles, then sorted by relevance and recency. Missing optional API keys produce warnings instead of request failures.
@@ -205,7 +205,6 @@ REDDIT_CLIENT_ID=...
 REDDIT_CLIENT_SECRET=...
 REDDIT_USER_AGENT="python:your-app:1.0 (by /u/your_reddit_username)"
 X_BEARER_TOKEN=...
-BING_SEARCH_API_KEY=...
 ```
 
 Optional AI provider variables:
@@ -251,12 +250,6 @@ Enable X/Twitter search by creating an official X API bearer token and setting:
 
 ```bash
 export X_BEARER_TOKEN="..."
-```
-
-Enable general web search by creating a Bing Web Search API key and setting:
-
-```bash
-export BING_SEARCH_API_KEY="..."
 ```
 
 Enable Gemini AI enhancement by creating a Gemini API key and setting:
@@ -972,7 +965,6 @@ Start Command: python3 -m uvicorn app:app --host 0.0.0.0 --port $PORT
 RESEARCH_ASSISTANT_API_KEY=your-production-secret
 YOUTUBE_API_KEY=optional
 X_BEARER_TOKEN=optional
-BING_SEARCH_API_KEY=optional
 AI_PROVIDER=auto
 GEMINI_API_KEY=optional
 OPENAI_API_KEY=optional
@@ -1008,7 +1000,6 @@ python3 -m uvicorn app:app --host 0.0.0.0 --port $PORT
 RESEARCH_ASSISTANT_API_KEY=your-production-secret
 YOUTUBE_API_KEY=optional
 X_BEARER_TOKEN=optional
-BING_SEARCH_API_KEY=optional
 AI_PROVIDER=auto
 GEMINI_API_KEY=optional
 OPENAI_API_KEY=optional

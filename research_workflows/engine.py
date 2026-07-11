@@ -5,7 +5,7 @@ from typing import Any, Awaitable, Callable, Dict, List
 from uuid import uuid4
 
 from analyzers.report_builder import escape
-from exporters.report_exporter import export_report
+from exporters.report_exporter import export_report, export_workflow_report
 from research_workflows.store import save_workflow
 
 
@@ -78,16 +78,23 @@ async def run_workflow(
     stages.append(stage("analyze", "completed", "Generated deterministic analysis; optional AI only runs when configured.", result_count=result_count))
     report = build_workflow_report(payload["topic"], pipeline["results"], analysis_dict, payload.get("template_name", ""))
     stages.append(stage("report", "completed", "Built traceable report with facts, interpretation, and inference separated."))
-    downloads: List[Dict[str, str]] = []
-    if payload["save_report"]:
+    try:
+        core_exports = export_workflow_report(report["markdown"], report, workflow_id)
+        downloads: List[Dict[str, str]] = [{"format": item["format"], "path": item["export_path"], "download_url": item["download_url"]} for item in core_exports]
         for output_format in payload["output_formats"]:
-            exported = export_report(report["markdown"], report, output_format)
-            warnings.extend(exported.get("warnings", []))
-            downloads.append({"format": output_format, "path": exported["export_path"], "download_url": exported["download_url"]})
-        stages.append(stage("save", "completed", "Saved workflow metadata and report files locally.", download_count=len(downloads)))
-        stages.append(stage("export", "completed", "Generated requested downloadable report formats.", formats=payload["output_formats"]))
-    else:
-        stages.extend([stage("save", "skipped", "save_report is false."), stage("export", "skipped", "save_report is false.")])
+            if output_format == "pdf":
+                exported = export_report(report["markdown"], report, output_format)
+                warnings.extend(exported.get("warnings", []))
+                downloads.append({"format": output_format, "path": exported["export_path"], "download_url": exported["download_url"]})
+        report["file_paths"] = {item["format"]: item["path"] for item in downloads}
+        stages.append(stage("save", "completed", "Persisted Markdown, HTML, and JSON workflow report files under reports/YYYY-MM-DD/.", download_count=len(downloads)))
+        stages.append(stage("export", "completed", "Generated required workflow report formats.", formats=[item["format"] for item in downloads]))
+    except OSError as exc:
+        warning = f"Workflow report persistence failed: {exc}"
+        stages.extend([stage("save", "failed", warning), stage("export", "skipped", warning)])
+        result = failed_workflow(workflow_id, payload, started_at, stages, warnings + [warning])
+        save_workflow(result)
+        return result
 
     result = {
         "workflow_id": workflow_id,

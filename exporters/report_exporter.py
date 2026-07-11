@@ -37,6 +37,29 @@ def export_report(markdown: str, json_payload: Dict[str, Any], output_format: st
     }
 
 
+def export_workflow_report(markdown: str, json_payload: Dict[str, Any], workflow_id: str) -> List[Dict[str, Any]]:
+    """Persist the three V12 reader formats with stable, workflow-specific filenames."""
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    directory = Path("reports") / today
+    directory.mkdir(parents=True, exist_ok=True)
+    safe_id = "".join(char if char.isalnum() or char in {"-", "_"} else "-" for char in workflow_id)
+    files = {
+        "markdown": (directory / f"workflow-{safe_id}.md", markdown),
+        "html": (directory / f"workflow-{safe_id}.html", markdown_to_html(markdown)),
+        "json": (directory / f"workflow-{safe_id}.json", json.dumps(json_payload, indent=2, ensure_ascii=False)),
+    }
+    exports: List[Dict[str, Any]] = []
+    for output_format, (path, content) in files.items():
+        path.write_text(content, encoding="utf-8")
+        exports.append({
+            "format": output_format,
+            "export_path": str(path),
+            "download_url": f"/reports/download/{path.parent.name}/{path.name}",
+            "warnings": [],
+        })
+    return exports
+
+
 def markdown_to_html(markdown: str) -> str:
     lines = []
     for line in markdown.splitlines():

@@ -8,6 +8,8 @@ This is not an e-commerce recommendation system. By default it does not recommen
 
 Saved workflow reports can now be read directly from `reports/YYYY-MM-DD/` through public endpoints: `GET /reports/latest`, `GET /reports/{workflow_id}`, and format-specific Markdown, HTML, JSON, and download URL endpoints. Missing workflows or saved report files return `404`. `GET /ui/report/{workflow_id}` provides a simple browser view. The legacy `GET /reports/{date}` behavior remains available for `YYYY-MM-DD` values.
 
+Every completed workflow now persists Markdown, HTML, and JSON files using workflow-specific names in `reports/YYYY-MM-DD/`, even when a caller sets `save_report: false` or requests a narrower output format list. A workflow is returned as failed if these required files cannot be written.
+
 ## V11 Automation and Notifications
 
 V11 adds persistent, non-secret scheduled jobs under `data/automation/jobs/`, execution history under `data/automation/runs/`, and deterministic change summaries under `data/automation/changes/`. Jobs run existing V10 research templates, save reports through the normal workflow path, compare each successful run with its prior successful run, and can create local alerts.

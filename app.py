@@ -625,8 +625,18 @@ class ResearchTemplatesResponse(BaseModel):
 
 
 class RunTemplateRequest(BaseModel):
-    template: str = Field(..., min_length=1, max_length=80)
-    overrides: Dict[str, Any] = Field(default_factory=dict)
+    template: str = Field(
+        ...,
+        min_length=1,
+        max_length=80,
+        description="Exact template ID returned by GET /research/templates.",
+        examples=["ai_video_weekly"],
+    )
+    overrides: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Optional non-secret workflow overrides for the selected template.",
+        examples=[{"days": 7, "use_ai": False}],
+    )
 
 
 AutomationScheduleType = Literal["hourly", "daily", "weekly", "manual"]
@@ -1056,9 +1066,21 @@ async def retry_research_workflow(workflow_id: str) -> ResearchWorkflowResponse:
     "/research/templates",
     response_model=ResearchTemplatesResponse,
     operation_id="listResearchTemplates",
-    summary="List reusable research templates",
-    description="Lists supported public-information research templates. Requires the X-API-Key header.",
+    summary="List the actual research templates available in this deployment",
+    description=(
+        "This endpoint is the authoritative source of available template IDs. Always call this endpoint before "
+        "claiming that a requested template does not exist. Do not infer or invent template names from memory. "
+        "Requires the X-API-Key header."
+    ),
     dependencies=[Depends(verify_api_key)],
+    openapi_extra={
+        "responses": {
+            "200": {
+                "description": "Authoritative template registry response.",
+                "content": {"application/json": {"example": {"templates": [{"id": "ai_video_weekly", "name": "AI Video Weekly"}]}}},
+            }
+        }
+    },
 )
 async def research_templates() -> ResearchTemplatesResponse:
     return ResearchTemplatesResponse(templates=[ResearchTemplate(**item) for item in list_templates()])
@@ -1068,9 +1090,36 @@ async def research_templates() -> ResearchTemplatesResponse:
     "/research/run-template",
     response_model=ResearchWorkflowResponse,
     operation_id="runResearchTemplate",
-    summary="Run a reusable research template",
-    description="Runs a template with optional non-secret request overrides. Requires the X-API-Key header.",
+    summary="Run an existing research template by exact template ID",
+    description=(
+        "Call listResearchTemplates first when availability is unknown. If the requested exact template ID appears "
+        "in the templates response, call this endpoint immediately. For ai_video_weekly, send "
+        "{\"template\":\"ai_video_weekly\"}. Do not ask the user to confirm again when they explicitly asked "
+        "to run the template. Requires the X-API-Key header."
+    ),
     dependencies=[Depends(verify_api_key)],
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {"application/json": {"example": {"template": "ai_video_weekly"}}},
+        },
+        "responses": {
+            "200": {
+                "description": "Workflow started from the exact template ID.",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "workflow_id": "3f9fbfd9-9d16-4ec5-9c1f-4b8565956c00",
+                            "status": "completed",
+                            "topic": "AI video tools weekly developments",
+                            "started_at": "2026-07-11T00:00:00Z",
+                            "completed_at": "2026-07-11T00:00:05Z",
+                        }
+                    }
+                },
+            }
+        },
+    },
 )
 async def research_run_template(request: RunTemplateRequest) -> ResearchWorkflowResponse:
     try:

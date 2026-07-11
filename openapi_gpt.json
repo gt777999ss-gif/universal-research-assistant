@@ -656,16 +656,24 @@
     },
     "/research/templates": {
       "get": {
-        "summary": "List reusable research templates",
-        "description": "Lists supported public-information research templates. Requires the X-API-Key header.",
+        "summary": "List the actual research templates available in this deployment",
+        "description": "This endpoint is the authoritative source of available template IDs. Always call this endpoint before claiming that a requested template does not exist. Do not infer or invent template names from memory. Requires the X-API-Key header.",
         "operationId": "listResearchTemplates",
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Authoritative template registry response.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ResearchTemplatesResponse"
+                },
+                "example": {
+                  "templates": [
+                    {
+                      "id": "ai_video_weekly",
+                      "name": "AI Video Weekly"
+                    }
+                  ]
                 }
               }
             }
@@ -680,14 +688,17 @@
     },
     "/research/run-template": {
       "post": {
-        "summary": "Run a reusable research template",
-        "description": "Runs a template with optional non-secret request overrides. Requires the X-API-Key header.",
+        "summary": "Run an existing research template by exact template ID",
+        "description": "Call listResearchTemplates first when availability is unknown. If the requested exact template ID appears in the templates response, call this endpoint immediately. For ai_video_weekly, send {\"template\":\"ai_video_weekly\"}. Do not ask the user to confirm again when they explicitly asked to run the template. Requires the X-API-Key header.",
         "operationId": "runResearchTemplate",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/RunTemplateRequest"
+              },
+              "example": {
+                "template": "ai_video_weekly"
               }
             }
           },
@@ -695,11 +706,18 @@
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Workflow started from the exact template ID.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ResearchWorkflowResponse"
+                },
+                "example": {
+                  "workflow_id": "3f9fbfd9-9d16-4ec5-9c1f-4b8565956c00",
+                  "status": "completed",
+                  "topic": "AI video tools weekly developments",
+                  "started_at": "2026-07-11T00:00:00Z",
+                  "completed_at": "2026-07-11T00:00:05Z"
                 }
               }
             }
@@ -4551,11 +4569,22 @@
             "type": "string",
             "maxLength": 80,
             "minLength": 1,
-            "title": "Template"
+            "title": "Template",
+            "description": "Exact template ID returned by GET /research/templates.",
+            "examples": [
+              "ai_video_weekly"
+            ]
           },
           "overrides": {
             "type": "object",
             "title": "Overrides",
+            "description": "Optional non-secret workflow overrides for the selected template.",
+            "examples": [
+              {
+                "days": 7,
+                "use_ai": false
+              }
+            ],
             "properties": {
               "data": {
                 "type": "string",

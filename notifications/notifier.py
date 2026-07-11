@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any, Dict
 
-import httpx
+from notifications.providers import deliver_notifications
 
 
 SUPPORTED_CHANNELS = {"email", "telegram", "discord", "webhook"}
@@ -20,9 +20,9 @@ async def send_test_notification(channel: str, target: str = "", message: str = 
     if channel == "webhook":
         webhook_url = os.getenv("WEBHOOK_URL", "")
         if webhook_url:
-            async with httpx.AsyncClient(timeout=15) as client:
-                response = await client.post(webhook_url, json={"message": message})
-                response.raise_for_status()
+            warnings = await deliver_notifications(["webhook"], {"job_name": "Notification test", "run_status": "test", "workflow_id": "", "result_count": 0, "warning_count": 0, "alert_count": 0, "summary": message, "downloads": [], "dashboard_url": "/ui/automation"})
+            if warnings:
+                return {"channel": channel, "target": "configured_webhook", "sent": False, "status": "delivery_failed", "detail": warnings[0]}
             return {
                 "channel": channel,
                 "target": "configured_webhook",
@@ -44,3 +44,8 @@ async def send_test_notification(channel: str, target: str = "", message: str = 
         "status": "placeholder",
         "detail": f"{channel} notification framework is present; provider credentials are not configured.",
     }
+
+
+async def send_automation_notifications(channels: list[str], payload: Dict[str, Any]) -> list[str]:
+    """Deliver only to explicitly configured channels; provider errors stay redacted."""
+    return await deliver_notifications(channels, payload)

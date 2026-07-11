@@ -22,27 +22,27 @@ INCLUDED_OPERATIONS: Tuple[Tuple[str, str], ...] = (
     ("/report", "post"),
     ("/report/export", "post"),
     ("/batch", "post"),
-    ("/agent/plan", "post"),
-    ("/agent/run", "post"),
-    ("/agent/changes", "post"),
-    ("/agent/briefing", "post"),
     ("/monitors", "get"),
     ("/monitors", "post"),
     ("/monitors/{id}", "put"),
     ("/monitors/{id}", "delete"),
     ("/monitor/run", "post"),
     ("/alerts", "get"),
-    ("/scheduler", "get"),
     ("/reports", "get"),
-    ("/reports/{date}", "get"),
     ("/research/run", "post"),
     ("/research/workflows", "get"),
     ("/research/workflows/{workflow_id}", "get"),
     ("/research/templates", "get"),
     ("/research/run-template", "post"),
-    ("/mcp/search", "post"),
-    ("/mcp/analyze", "post"),
-    ("/mcp/briefing", "post"),
+    ("/automation/jobs", "get"),
+    ("/automation/jobs", "post"),
+    ("/automation/jobs/{job_id}", "put"),
+    ("/automation/jobs/{job_id}", "delete"),
+    ("/automation/jobs/{job_id}/run", "post"),
+    ("/automation/runs", "get"),
+    ("/automation/digest/daily", "post"),
+    ("/automation/digest/weekly", "post"),
+    ("/alerts/{alert_id}/acknowledge", "post"),
 )
 
 EXPLICIT_OBJECT_PROPERTIES: Dict[str, Dict[str, Any]] = {
@@ -100,7 +100,7 @@ def build_gpt_openapi() -> Dict[str, Any]:
             "description": "Production server",
         }
     ]
-    filtered["info"]["title"] = "Universal Research Assistant V10 GPT Actions API"
+    filtered["info"]["title"] = "Universal Research Assistant V11 GPT Actions API"
     filtered["info"]["description"] = (
         "ChatGPT Actions optimized OpenAPI specification for the Universal Research Assistant. "
         "This reduced schema keeps the most important public information research, agent, monitoring, "

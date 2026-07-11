@@ -24,6 +24,9 @@ data/history/*.json
 data/alerts/*.json
 data/manual_imports/*.csv
 data/workflows/*.json
+data/automation/jobs/*.json
+data/automation/runs/*.json
+data/automation/changes/*.json
 
 # Local/editor files
 .DS_Store

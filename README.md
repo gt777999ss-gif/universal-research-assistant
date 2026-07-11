@@ -1,8 +1,30 @@
-# Universal AI-Powered Public Information Research Assistant V10 Enterprise AI Research Agent
+# Universal AI-Powered Public Information Research Assistant V11 Automation and Notifications
 
 FastAPI backend for public information research, deterministic reporting, optional AI-enhanced analysis, monitoring automation, alert rules, scheduler status, downloadable report exports, HTML dashboard pages, and MCP-compatible wrappers. It is useful without Gemini or OpenAI: if AI keys are missing or invalid, the system falls back to deterministic analysis and still generates reports.
 
 This is not an e-commerce recommendation system. By default it does not recommend products, suppliers, purchases, or selling strategies.
+
+## V11 Automation and Notifications
+
+V11 adds persistent, non-secret scheduled jobs under `data/automation/jobs/`, execution history under `data/automation/runs/`, and deterministic change summaries under `data/automation/changes/`. Jobs run existing V10 research templates, save reports through the normal workflow path, compare each successful run with its prior successful run, and can create local alerts.
+
+Supported schedules are `hourly`, `daily`, `weekly`, and `manual`. Jobs are disabled by default. The in-process scheduler is best-effort while the service remains awake; use `POST /automation/tick` with an external scheduler for reliable production execution. Each job/scheduled-time pair has a persistent execution key, preventing duplicate ticks from creating duplicate runs.
+
+Protected automation APIs include `/automation/jobs`, `/automation/runs`, `/automation/tick`, daily and weekly digests, and alert acknowledgement. Public UI pages are `/ui/automation`, `/ui/automation/jobs`, `/ui/automation/runs`, and `/ui/alerts`.
+
+Supported deterministic alert rules: `new_keyword`, `result_count_above`, `result_count_below`, `source_count_change`, `score_above`, `platform_mentioned`, `workflow_failed`, and `warning_present`.
+
+Optional notification channels are webhook, Telegram, Discord, and SMTP email. None is required. Missing configuration produces a redacted warning and does not fail the workflow. Credentials are read only from server environment variables: `WEBHOOK_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `DISCORD_WEBHOOK_URL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_TO`, and `SMTP_USE_TLS`.
+
+For Render Cron Job, GitHub Actions cron, or a local scheduler, run:
+
+```bash
+AUTOMATION_BASE_URL=https://universal-research-assistant.onrender.com \
+RESEARCH_ASSISTANT_API_KEY=your-key \
+python3 scripts/automation_tick.py
+```
+
+The script sends an authenticated `POST /automation/tick`. Do not commit credentials. The GPT Actions import URL remains `https://universal-research-assistant.onrender.com/openapi_gpt.json`.
 
 ## V10 Unified Research Workflows
 

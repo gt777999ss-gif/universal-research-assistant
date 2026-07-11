@@ -5,7 +5,7 @@ info:
     public sources, filters spam and duplicates, ranks relevant results, and returns
     clean JSON. It does not recommend products, suppliers, purchases, or sales strategies
     unless explicitly asked.
-  version: 10.0.0
+  version: 11.0.0
 servers:
 - url: https://universal-research-assistant.onrender.com
   description: Production server
@@ -285,6 +285,331 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
       security:
       - APIKeyHeader: []
+  /automation/jobs:
+    get:
+      summary: Automation Jobs
+      operationId: listAutomationJobs
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationJobsResponse'
+      security:
+      - APIKeyHeader: []
+    post:
+      summary: Automation Create Job
+      operationId: createAutomationJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutomationJobRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationJob'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - APIKeyHeader: []
+  /automation/jobs/{job_id}:
+    get:
+      summary: Automation Get Job
+      operationId: getAutomationJob
+      security:
+      - APIKeyHeader: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationJob'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      summary: Automation Update Job
+      operationId: updateAutomationJob
+      security:
+      - APIKeyHeader: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutomationJobUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationJob'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      summary: Automation Delete Job
+      operationId: deleteAutomationJob
+      security:
+      - APIKeyHeader: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /automation/jobs/{job_id}/run:
+    post:
+      summary: Automation Run Job
+      operationId: runAutomationJob
+      security:
+      - APIKeyHeader: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRun'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /automation/jobs/{job_id}/enable:
+    post:
+      summary: Automation Enable Job
+      operationId: enableAutomationJob
+      security:
+      - APIKeyHeader: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationJob'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /automation/jobs/{job_id}/disable:
+    post:
+      summary: Automation Disable Job
+      operationId: disableAutomationJob
+      security:
+      - APIKeyHeader: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationJob'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /automation/runs:
+    get:
+      summary: Automation Runs
+      operationId: listAutomationRuns
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRunsResponse'
+      security:
+      - APIKeyHeader: []
+  /automation/runs/{run_id}:
+    get:
+      summary: Automation Get Run
+      operationId: getAutomationRun
+      security:
+      - APIKeyHeader: []
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Run Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRun'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /automation/tick:
+    post:
+      summary: Automation Tick
+      operationId: tickAutomation
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationTickResponse'
+      security:
+      - APIKeyHeader: []
+  /automation/digest/daily:
+    post:
+      summary: Automation Daily Digest
+      operationId: generateDailyAutomationDigest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutomationDigestRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationDigestResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - APIKeyHeader: []
+  /automation/digest/weekly:
+    post:
+      summary: Automation Weekly Digest
+      operationId: generateWeeklyAutomationDigest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutomationDigestRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationDigestResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - APIKeyHeader: []
+  /alerts/{alert_id}/acknowledge:
+    post:
+      summary: Alerts Acknowledge
+      operationId: acknowledgeAlert
+      security:
+      - APIKeyHeader: []
+      parameters:
+      - name: alert_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Alert Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertItem'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /ui:
     get:
       summary: Simple public UI dashboard
@@ -372,6 +697,54 @@ paths:
       summary: Research templates browser
       description: Public HTML page listing reusable public-information workflow templates.
       operationId: getUITemplates
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+      security: []
+  /ui/automation:
+    get:
+      summary: Ui Automation
+      operationId: getUIAutomation
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+      security: []
+  /ui/automation/jobs:
+    get:
+      summary: Ui Automation Jobs
+      operationId: getUIAutomationJobs
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+      security: []
+  /ui/automation/runs:
+    get:
+      summary: Ui Automation Runs
+      operationId: getUIAutomationRuns
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+      security: []
+  /ui/alerts:
+    get:
+      summary: Ui Alerts
+      operationId: getUIAlertBrowser
       responses:
         '200':
           description: Successful Response
@@ -1565,6 +1938,18 @@ components:
       title: AgentRunResponse
     AlertItem:
       properties:
+        id:
+          type: string
+          title: Id
+          default: ''
+        job_id:
+          type: string
+          title: Job Id
+          default: ''
+        run_id:
+          type: string
+          title: Run Id
+          default: ''
         created_at:
           type: string
           title: Created At
@@ -1597,6 +1982,14 @@ components:
         path:
           type: string
           title: Path
+          default: ''
+        acknowledged:
+          type: boolean
+          title: Acknowledged
+          default: false
+        related_workflow_id:
+          type: string
+          title: Related Workflow Id
           default: ''
       type: object
       title: AlertItem
@@ -1809,6 +2202,440 @@ components:
       - sources
       - executive_summary
       title: AnalysisResponse
+    AutomationDigestRequest:
+      properties:
+        send_notifications:
+          type: boolean
+          title: Send Notifications
+          default: false
+        notification_channels:
+          items:
+            type: string
+            enum:
+            - email
+            - telegram
+            - discord
+            - webhook
+          type: array
+          title: Notification Channels
+      type: object
+      title: AutomationDigestRequest
+    AutomationDigestResponse:
+      properties:
+        period:
+          type: string
+          title: Period
+        completed_jobs:
+          type: integer
+          title: Completed Jobs
+        failed_jobs:
+          type: integer
+          title: Failed Jobs
+        new_alerts:
+          items:
+            $ref: '#/components/schemas/AlertItem'
+          type: array
+          title: New Alerts
+        top_changes:
+          items:
+            type: string
+          type: array
+          title: Top Changes
+        latest_reports:
+          items:
+            $ref: '#/components/schemas/ReportFileItem'
+          type: array
+          title: Latest Reports
+        download_links:
+          items:
+            type: string
+          type: array
+          title: Download Links
+        warnings:
+          items:
+            type: string
+          type: array
+          title: Warnings
+      type: object
+      required:
+      - period
+      - completed_jobs
+      - failed_jobs
+      title: AutomationDigestResponse
+    AutomationJob:
+      properties:
+        name:
+          type: string
+          maxLength: 120
+          minLength: 1
+          title: Name
+        template:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Template
+        enabled:
+          type: boolean
+          title: Enabled
+          default: false
+        overrides:
+          additionalProperties: true
+          type: object
+          title: Overrides
+        schedule_type:
+          type: string
+          enum:
+          - hourly
+          - daily
+          - weekly
+          - manual
+          title: Schedule Type
+          default: manual
+        timezone:
+          type: string
+          title: Timezone
+          default: UTC
+        hour:
+          type: integer
+          maximum: 23.0
+          minimum: 0.0
+          title: Hour
+          default: 8
+        minute:
+          type: integer
+          maximum: 59.0
+          minimum: 0.0
+          title: Minute
+          default: 0
+        weekday:
+          type: integer
+          maximum: 6.0
+          minimum: 0.0
+          title: Weekday
+          default: 0
+        interval_hours:
+          type: integer
+          maximum: 168.0
+          minimum: 1.0
+          title: Interval Hours
+          default: 1
+        notification_channels:
+          items:
+            type: string
+            enum:
+            - email
+            - telegram
+            - discord
+            - webhook
+          type: array
+          title: Notification Channels
+        alert_rules:
+          additionalProperties: true
+          type: object
+          title: Alert Rules
+        id:
+          type: string
+          title: Id
+        created_at:
+          type: string
+          title: Created At
+        updated_at:
+          type: string
+          title: Updated At
+        last_run_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Run At
+        next_run_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Run At
+        last_status:
+          type: string
+          title: Last Status
+          default: never_run
+        last_workflow_id:
+          type: string
+          title: Last Workflow Id
+          default: ''
+      type: object
+      required:
+      - name
+      - template
+      - id
+      - created_at
+      - updated_at
+      title: AutomationJob
+    AutomationJobRequest:
+      properties:
+        name:
+          type: string
+          maxLength: 120
+          minLength: 1
+          title: Name
+        template:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Template
+        enabled:
+          type: boolean
+          title: Enabled
+          default: false
+        overrides:
+          additionalProperties: true
+          type: object
+          title: Overrides
+        schedule_type:
+          type: string
+          enum:
+          - hourly
+          - daily
+          - weekly
+          - manual
+          title: Schedule Type
+          default: manual
+        timezone:
+          type: string
+          title: Timezone
+          default: UTC
+        hour:
+          type: integer
+          maximum: 23.0
+          minimum: 0.0
+          title: Hour
+          default: 8
+        minute:
+          type: integer
+          maximum: 59.0
+          minimum: 0.0
+          title: Minute
+          default: 0
+        weekday:
+          type: integer
+          maximum: 6.0
+          minimum: 0.0
+          title: Weekday
+          default: 0
+        interval_hours:
+          type: integer
+          maximum: 168.0
+          minimum: 1.0
+          title: Interval Hours
+          default: 1
+        notification_channels:
+          items:
+            type: string
+            enum:
+            - email
+            - telegram
+            - discord
+            - webhook
+          type: array
+          title: Notification Channels
+        alert_rules:
+          additionalProperties: true
+          type: object
+          title: Alert Rules
+      type: object
+      required:
+      - name
+      - template
+      title: AutomationJobRequest
+    AutomationJobUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 120
+            minLength: 1
+          - type: 'null'
+          title: Name
+        enabled:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Enabled
+        template:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Template
+        overrides:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Overrides
+        schedule_type:
+          anyOf:
+          - type: string
+            enum:
+            - hourly
+            - daily
+            - weekly
+            - manual
+          - type: 'null'
+          title: Schedule Type
+        timezone:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Timezone
+        hour:
+          anyOf:
+          - type: integer
+            maximum: 23.0
+            minimum: 0.0
+          - type: 'null'
+          title: Hour
+        minute:
+          anyOf:
+          - type: integer
+            maximum: 59.0
+            minimum: 0.0
+          - type: 'null'
+          title: Minute
+        weekday:
+          anyOf:
+          - type: integer
+            maximum: 6.0
+            minimum: 0.0
+          - type: 'null'
+          title: Weekday
+        interval_hours:
+          anyOf:
+          - type: integer
+            maximum: 168.0
+            minimum: 1.0
+          - type: 'null'
+          title: Interval Hours
+        notification_channels:
+          anyOf:
+          - items:
+              type: string
+              enum:
+              - email
+              - telegram
+              - discord
+              - webhook
+            type: array
+          - type: 'null'
+          title: Notification Channels
+        alert_rules:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Alert Rules
+      type: object
+      title: AutomationJobUpdate
+    AutomationJobsResponse:
+      properties:
+        jobs:
+          items:
+            $ref: '#/components/schemas/AutomationJob'
+          type: array
+          title: Jobs
+      type: object
+      title: AutomationJobsResponse
+    AutomationRun:
+      properties:
+        id:
+          type: string
+          title: Id
+          default: ''
+        job_id:
+          type: string
+          title: Job Id
+          default: ''
+        job_name:
+          type: string
+          title: Job Name
+          default: ''
+        execution_key:
+          type: string
+          title: Execution Key
+          default: ''
+        scheduled_at:
+          type: string
+          title: Scheduled At
+          default: ''
+        started_at:
+          type: string
+          title: Started At
+          default: ''
+        completed_at:
+          type: string
+          title: Completed At
+          default: ''
+        status:
+          type: string
+          title: Status
+          default: ''
+        workflow_id:
+          type: string
+          title: Workflow Id
+          default: ''
+        result_count:
+          type: integer
+          title: Result Count
+          default: 0
+        warnings:
+          items:
+            type: string
+          type: array
+          title: Warnings
+        alerts:
+          items:
+            type: string
+          type: array
+          title: Alerts
+        change_path:
+          type: string
+          title: Change Path
+          default: ''
+        notification_warnings:
+          items:
+            type: string
+          type: array
+          title: Notification Warnings
+      type: object
+      title: AutomationRun
+    AutomationRunsResponse:
+      properties:
+        runs:
+          items:
+            $ref: '#/components/schemas/AutomationRun'
+          type: array
+          title: Runs
+      type: object
+      title: AutomationRunsResponse
+    AutomationTickResponse:
+      properties:
+        mode:
+          type: string
+          title: Mode
+        due_job_count:
+          type: integer
+          title: Due Job Count
+        runs:
+          items:
+            $ref: '#/components/schemas/AutomationRun'
+          type: array
+          title: Runs
+        warnings:
+          items:
+            type: string
+          type: array
+          title: Warnings
+      type: object
+      required:
+      - mode
+      - due_job_count
+      title: AutomationTickResponse
     BatchRequest:
       properties:
         tasks:
@@ -3408,6 +4235,19 @@ components:
       required:
       - sources
       title: SourcesResponse
+    StatusResponse:
+      properties:
+        success:
+          type: boolean
+          title: Success
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - success
+      - message
+      title: StatusResponse
     TopicWatchCreateRequest:
       properties:
         name:

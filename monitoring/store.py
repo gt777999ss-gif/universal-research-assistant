@@ -119,7 +119,7 @@ def save_alert(alert: Dict[str, Any]) -> str:
     ensure_runtime_dirs()
     timestamp = utc_now().strftime("%Y%m%d-%H%M%S-%f")
     path = ALERT_DIR / f"alert-{timestamp}.json"
-    payload = {"created_at": utc_now().isoformat() + "Z", **alert}
+    payload = {"created_at": utc_now().isoformat() + "Z", "acknowledged": False, **alert}
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     return str(path)
 
@@ -133,6 +133,21 @@ def list_alerts(limit: int = 50) -> List[Dict[str, Any]]:
         item["path"] = str(path)
         alerts.append(item)
     return alerts
+
+
+def acknowledge_alert(alert_id: str) -> Optional[Dict[str, Any]]:
+    if "/" in alert_id or ".." in alert_id:
+        return None
+    ensure_runtime_dirs()
+    for path in ALERT_DIR.glob("*.json"):
+        item = json.loads(path.read_text(encoding="utf-8"))
+        if item.get("id") == alert_id:
+            item["acknowledged"] = True
+            item["acknowledged_at"] = utc_now().isoformat() + "Z"
+            path.write_text(json.dumps(item, indent=2, ensure_ascii=False), encoding="utf-8")
+            item["path"] = str(path)
+            return item
+    return None
 
 
 def save_report_files(

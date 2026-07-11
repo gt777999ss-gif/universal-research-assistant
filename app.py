@@ -18,6 +18,8 @@ from agents.planner import build_research_plan, resolve_language
 from agents.runner import build_agent_briefing, recommended_next_steps
 from agents.watcher import build_watch_monitors
 from ai_providers.factory import run_ai_analysis
+from automation.service import AutomationScheduler, PRESETS, create_job as create_automation_job, due_jobs, next_run_at, run_job as run_automation_job, update_job as update_automation_job
+from automation.store import delete_job as delete_automation_job, get_job as get_automation_job, get_run as get_automation_run, list_jobs as list_automation_jobs, list_runs as list_automation_runs
 from analyzers.opportunity_analyzer import analyze_opportunities
 from analyzers.report_builder import (
     build_executive_summary,
@@ -35,6 +37,7 @@ from exporters.report_exporter import export_report
 from models import SearchResult
 from monitoring.store import (
     create_monitor,
+    acknowledge_alert,
     delete_monitor,
     enabled_due_monitors,
     get_monitor,
@@ -51,7 +54,7 @@ from monitoring.store import (
     update_monitor,
     update_monitor_after_run,
 )
-from notifications.notifier import send_test_notification
+from notifications.notifier import send_automation_notifications, send_test_notification
 from exporters.markdown_exporter import export_markdown
 from processors.dedupe import dedupe_results
 from processors.filter import remove_ads_spam_irrelevant
@@ -297,6 +300,9 @@ class MonitorRunResponse(BaseModel):
 
 
 class AlertItem(BaseModel):
+    id: str = ""
+    job_id: str = ""
+    run_id: str = ""
     created_at: str = ""
     monitor_id: str = ""
     monitor_name: str = ""
@@ -305,6 +311,8 @@ class AlertItem(BaseModel):
     severity: str = "info"
     evidence: List[str] = Field(default_factory=list)
     path: str = ""
+    acknowledged: bool = False
+    related_workflow_id: str = ""
 
 
 class AlertsResponse(BaseModel):
@@ -604,9 +612,106 @@ class RunTemplateRequest(BaseModel):
     overrides: Dict[str, Any] = Field(default_factory=dict)
 
 
+AutomationScheduleType = Literal["hourly", "daily", "weekly", "manual"]
+
+
+class AutomationJobRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    template: str = Field(..., min_length=1, max_length=80)
+    enabled: bool = False
+    overrides: Dict[str, Any] = Field(default_factory=dict)
+    schedule_type: AutomationScheduleType = "manual"
+    timezone: str = "UTC"
+    hour: int = Field(default=8, ge=0, le=23)
+    minute: int = Field(default=0, ge=0, le=59)
+    weekday: int = Field(default=0, ge=0, le=6)
+    interval_hours: int = Field(default=1, ge=1, le=168)
+    notification_channels: List[NotificationChannel] = Field(default_factory=list)
+    alert_rules: Dict[str, Any] = Field(default_factory=dict)
+
+
+class AutomationJobUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    enabled: Optional[bool] = None
+    template: Optional[str] = None
+    overrides: Optional[Dict[str, Any]] = None
+    schedule_type: Optional[AutomationScheduleType] = None
+    timezone: Optional[str] = None
+    hour: Optional[int] = Field(default=None, ge=0, le=23)
+    minute: Optional[int] = Field(default=None, ge=0, le=59)
+    weekday: Optional[int] = Field(default=None, ge=0, le=6)
+    interval_hours: Optional[int] = Field(default=None, ge=1, le=168)
+    notification_channels: Optional[List[NotificationChannel]] = None
+    alert_rules: Optional[Dict[str, Any]] = None
+
+
+class AutomationJob(AutomationJobRequest):
+    id: str
+    created_at: str
+    updated_at: str
+    last_run_at: Optional[str] = None
+    next_run_at: Optional[str] = None
+    last_status: str = "never_run"
+    last_workflow_id: str = ""
+
+
+class AutomationJobsResponse(BaseModel):
+    jobs: List[AutomationJob] = Field(default_factory=list)
+
+
+class AutomationRun(BaseModel):
+    id: str = ""
+    job_id: str = ""
+    job_name: str = ""
+    execution_key: str = ""
+    scheduled_at: str = ""
+    started_at: str = ""
+    completed_at: str = ""
+    status: str = ""
+    workflow_id: str = ""
+    result_count: int = 0
+    warnings: List[str] = Field(default_factory=list)
+    alerts: List[str] = Field(default_factory=list)
+    change_path: str = ""
+    notification_warnings: List[str] = Field(default_factory=list)
+
+
+class AutomationRunsResponse(BaseModel):
+    runs: List[AutomationRun] = Field(default_factory=list)
+
+
+class AutomationTickResponse(BaseModel):
+    mode: str
+    due_job_count: int
+    runs: List[AutomationRun] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+
+
+class AutomationDigestRequest(BaseModel):
+    send_notifications: bool = False
+    notification_channels: List[NotificationChannel] = Field(default_factory=list)
+
+
+class AutomationDigestResponse(BaseModel):
+    period: str
+    completed_jobs: int
+    failed_jobs: int
+    new_alerts: List[AlertItem] = Field(default_factory=list)
+    top_changes: List[str] = Field(default_factory=list)
+    latest_reports: List[ReportFileItem] = Field(default_factory=list)
+    download_links: List[str] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+
+
+class StatusResponse(BaseModel):
+    success: bool
+    message: str
+
+
 settings = yaml.safe_load(open("config/settings.yaml", "r", encoding="utf-8"))
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 scheduler_instance: Optional[MonitorScheduler] = None
+automation_scheduler_instance: Optional[AutomationScheduler] = None
 
 app = FastAPI(
     title=settings["app"]["name"],
@@ -627,15 +732,19 @@ app = FastAPI(
 
 @app.on_event("startup")
 async def start_monitor_scheduler() -> None:
-    global scheduler_instance
+    global scheduler_instance, automation_scheduler_instance
     scheduler_instance = MonitorScheduler(run_monitor_job)
     asyncio.create_task(scheduler_instance.loop_forever())
+    automation_scheduler_instance = AutomationScheduler(automation_tick_once)
+    asyncio.create_task(automation_scheduler_instance.loop_forever())
 
 
 @app.on_event("shutdown")
 async def stop_monitor_scheduler() -> None:
     if scheduler_instance:
         scheduler_instance.stop()
+    if automation_scheduler_instance:
+        automation_scheduler_instance.stop()
 
 
 @app.get(
@@ -877,6 +986,97 @@ async def research_run_template(request: RunTemplateRequest) -> ResearchWorkflow
     return ResearchWorkflowResponse(**await run_research_workflow(ResearchWorkflowRequest(**payload)))
 
 
+@app.get("/automation/jobs", response_model=AutomationJobsResponse, operation_id="listAutomationJobs", dependencies=[Depends(verify_api_key)])
+async def automation_jobs() -> AutomationJobsResponse:
+    return AutomationJobsResponse(jobs=[AutomationJob(**item) for item in list_automation_jobs()])
+
+
+@app.post("/automation/jobs", response_model=AutomationJob, operation_id="createAutomationJob", dependencies=[Depends(verify_api_key)])
+async def automation_create_job(request: AutomationJobRequest) -> AutomationJob:
+    if request.template not in {item["id"] for item in list_templates()}:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Research template not found.")
+    return AutomationJob(**create_automation_job(request.model_dump()))
+
+
+@app.get("/automation/jobs/{job_id}", response_model=AutomationJob, operation_id="getAutomationJob", dependencies=[Depends(verify_api_key)])
+async def automation_get_job(job_id: str) -> AutomationJob:
+    job = get_automation_job(job_id)
+    if not job: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Automation job not found.")
+    return AutomationJob(**job)
+
+
+@app.put("/automation/jobs/{job_id}", response_model=AutomationJob, operation_id="updateAutomationJob", dependencies=[Depends(verify_api_key)])
+async def automation_update_job(job_id: str, request: AutomationJobUpdate) -> AutomationJob:
+    updates = request.model_dump(exclude_unset=True)
+    if "template" in updates and updates["template"] not in {item["id"] for item in list_templates()}:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Research template not found.")
+    job = update_automation_job(job_id, updates)
+    if not job: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Automation job not found.")
+    return AutomationJob(**job)
+
+
+@app.delete("/automation/jobs/{job_id}", response_model=StatusResponse, operation_id="deleteAutomationJob", dependencies=[Depends(verify_api_key)])
+async def automation_delete_job(job_id: str) -> StatusResponse:
+    if not delete_automation_job(job_id): raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Automation job not found.")
+    return StatusResponse(success=True, message="Automation job deleted.")
+
+
+@app.post("/automation/jobs/{job_id}/run", response_model=AutomationRun, operation_id="runAutomationJob", dependencies=[Depends(verify_api_key)])
+async def automation_run_job(job_id: str) -> AutomationRun:
+    job = get_automation_job(job_id)
+    if not job: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Automation job not found.")
+    return AutomationRun(**await execute_automation_job(job, scheduled_at=f"manual:{datetime.utcnow().isoformat()}"))
+
+
+@app.post("/automation/jobs/{job_id}/enable", response_model=AutomationJob, operation_id="enableAutomationJob", dependencies=[Depends(verify_api_key)])
+async def automation_enable_job(job_id: str) -> AutomationJob:
+    job = update_automation_job(job_id, {"enabled": True})
+    if not job: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Automation job not found.")
+    return AutomationJob(**job)
+
+
+@app.post("/automation/jobs/{job_id}/disable", response_model=AutomationJob, operation_id="disableAutomationJob", dependencies=[Depends(verify_api_key)])
+async def automation_disable_job(job_id: str) -> AutomationJob:
+    job = update_automation_job(job_id, {"enabled": False})
+    if not job: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Automation job not found.")
+    return AutomationJob(**job)
+
+
+@app.get("/automation/runs", response_model=AutomationRunsResponse, operation_id="listAutomationRuns", dependencies=[Depends(verify_api_key)])
+async def automation_runs() -> AutomationRunsResponse:
+    return AutomationRunsResponse(runs=[AutomationRun(**item) for item in list_automation_runs()])
+
+
+@app.get("/automation/runs/{run_id}", response_model=AutomationRun, operation_id="getAutomationRun", dependencies=[Depends(verify_api_key)])
+async def automation_get_run(run_id: str) -> AutomationRun:
+    run = get_automation_run(run_id)
+    if not run: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Automation run not found.")
+    return AutomationRun(**run)
+
+
+@app.post("/automation/tick", response_model=AutomationTickResponse, operation_id="tickAutomation", dependencies=[Depends(verify_api_key)])
+async def automation_tick() -> AutomationTickResponse:
+    runs = await automation_tick_once()
+    return AutomationTickResponse(mode="external_trigger", due_job_count=len(runs), runs=[AutomationRun(**item) for item in runs])
+
+
+@app.post("/automation/digest/daily", response_model=AutomationDigestResponse, operation_id="generateDailyAutomationDigest", dependencies=[Depends(verify_api_key)])
+async def automation_daily_digest(request: AutomationDigestRequest) -> AutomationDigestResponse:
+    return await build_automation_digest("daily", request)
+
+
+@app.post("/automation/digest/weekly", response_model=AutomationDigestResponse, operation_id="generateWeeklyAutomationDigest", dependencies=[Depends(verify_api_key)])
+async def automation_weekly_digest(request: AutomationDigestRequest) -> AutomationDigestResponse:
+    return await build_automation_digest("weekly", request)
+
+
+@app.post("/alerts/{alert_id}/acknowledge", response_model=AlertItem, operation_id="acknowledgeAlert", dependencies=[Depends(verify_api_key)])
+async def alerts_acknowledge(alert_id: str) -> AlertItem:
+    alert = acknowledge_alert(alert_id)
+    if not alert: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found.")
+    return AlertItem(**alert)
+
+
 @app.get(
     "/ui",
     response_class=HTMLResponse,
@@ -959,6 +1159,26 @@ async def ui_workflows() -> HTMLResponse:
 )
 async def ui_templates() -> HTMLResponse:
     return HTMLResponse(build_ui_page("Research Templates", template_sections()))
+
+
+@app.get("/ui/automation", response_class=HTMLResponse, operation_id="getUIAutomation", openapi_extra={"security": []})
+async def ui_automation() -> HTMLResponse:
+    return HTMLResponse(build_ui_page("Automation", automation_sections()))
+
+
+@app.get("/ui/automation/jobs", response_class=HTMLResponse, operation_id="getUIAutomationJobs", openapi_extra={"security": []})
+async def ui_automation_jobs() -> HTMLResponse:
+    return HTMLResponse(build_ui_page("Automation Jobs", [automation_job_table(list_automation_jobs(), "Scheduled Jobs")]))
+
+
+@app.get("/ui/automation/runs", response_class=HTMLResponse, operation_id="getUIAutomationRuns", openapi_extra={"security": []})
+async def ui_automation_runs() -> HTMLResponse:
+    return HTMLResponse(build_ui_page("Automation Runs", [automation_run_table(list_automation_runs(), "Recent Executions")]))
+
+
+@app.get("/ui/alerts", response_class=HTMLResponse, operation_id="getUIAlertBrowser", openapi_extra={"security": []})
+async def ui_alerts() -> HTMLResponse:
+    return HTMLResponse(build_ui_page("Alerts", [alert_table(list_alerts(100), "Recent Alerts")]))
 
 
 @app.get(
@@ -1735,7 +1955,7 @@ def build_ui_page(title: str, sections: List[str]) -> str:
         "section{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;margin:16px 0}table{border-collapse:collapse;width:100%;margin:12px 0}td,th{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left;font-size:14px}"
         ".ok{color:#047857;font-weight:600}.warn{color:#b45309;font-weight:600}.muted{color:#6b7280}"
     )
-    nav = "<nav><a href='/ui'>Dashboard</a><a href='/ui/research'>Research</a><a href='/ui/workflows'>Workflows</a><a href='/ui/templates'>Templates</a><a href='/ui/status'>Status</a><a href='/ui/reports'>Reports</a><a href='/ui/monitors'>Monitors</a><a href='/openapi.json'>OpenAPI</a><a href='/privacy'>Privacy</a></nav>"
+    nav = "<nav><a href='/ui'>Dashboard</a><a href='/ui/research'>Research</a><a href='/ui/workflows'>Workflows</a><a href='/ui/templates'>Templates</a><a href='/ui/automation'>Automation</a><a href='/ui/alerts'>Alerts</a><a href='/ui/status'>Status</a><a href='/ui/reports'>Reports</a><a href='/ui/monitors'>Monitors</a><a href='/openapi.json'>OpenAPI</a><a href='/privacy'>Privacy</a></nav>"
     return f"<!doctype html><html><head><meta charset='utf-8'><title>{title} - Universal Research Assistant</title><style>{style}</style></head><body><main><h1>{title}</h1>{nav}{''.join(sections)}</main></body></html>"
 
 
@@ -1744,7 +1964,7 @@ def dashboard_sections() -> List[str]:
     monitors = list_monitors()
     alerts_data = list_alerts(8)
     sections = [
-        "<section><h2>Service Status</h2><p class='ok'>ok</p><p class='muted'>Universal Research Assistant V10 Enterprise AI Research Agent</p><p><a class='button' href='/ui/research'>Run research</a><a class='button' href='/ui/workflows'>View workflows</a><a class='button' href='/ui/templates'>View templates</a><a class='button' href='/ui/reports'>Browse reports</a></p></section>",
+        "<section><h2>Service Status</h2><p class='ok'>ok</p><p class='muted'>Universal Research Assistant V11 Automation and Notifications</p><p><a class='button' href='/ui/research'>Run research</a><a class='button' href='/ui/automation'>Automation</a><a class='button' href='/ui/workflows'>View workflows</a><a class='button' href='/ui/reports'>Browse reports</a></p></section>",
         source_status_table(),
         report_table(reports, "Recent Reports"),
         monitor_table(monitors[:10], "Monitors"),
@@ -1789,6 +2009,15 @@ def workflow_sections() -> List[str]:
 
 def template_sections() -> List[str]:
     return [template_table(list_templates(), "Available Templates")]
+
+
+def automation_sections() -> List[str]:
+    return [
+        "<section><h2>Automation Status</h2><p class='muted'>In-process scheduling runs while this service stays awake. Use the authenticated external tick endpoint for reliable Render Cron, GitHub Actions, or uptime scheduler execution.</p><p><a class='button' href='/ui/automation/jobs'>Jobs</a><a class='button' href='/ui/automation/runs'>Runs</a><a class='button' href='/ui/alerts'>Alerts</a></p></section>",
+        automation_job_table(list_automation_jobs(), "Scheduled Jobs"),
+        automation_run_table(list_automation_runs(12), "Recent Executions"),
+        alert_table(list_alerts(12), "Recent Alerts"),
+    ]
 
 
 def source_status_table() -> str:
@@ -1845,6 +2074,18 @@ def template_table(templates: List[Dict[str, Any]], title: str) -> str:
         for item in templates
     )
     return f"<section><h2>{title}</h2><table><tr><th>ID</th><th>Name</th><th>Description</th><th>Sources</th></tr>{rows}</table></section>"
+
+
+def automation_job_table(jobs: List[Dict[str, Any]], title: str) -> str:
+    if not jobs: return f"<section><h2>{title}</h2><p class='muted'>No scheduled jobs found.</p></section>"
+    rows = "".join(f"<tr><td>{item.get('name','')}</td><td>{item.get('template','')}</td><td>{item.get('enabled')}</td><td>{item.get('next_run_at') or ''}</td><td>{item.get('last_status','')}</td></tr>" for item in jobs)
+    return f"<section><h2>{title}</h2><table><tr><th>Name</th><th>Template</th><th>Enabled</th><th>Next Run</th><th>Last Status</th></tr>{rows}</table></section>"
+
+
+def automation_run_table(runs: List[Dict[str, Any]], title: str) -> str:
+    if not runs: return f"<section><h2>{title}</h2><p class='muted'>No automation runs found.</p></section>"
+    rows = "".join(f"<tr><td>{item.get('started_at','')}</td><td>{item.get('job_name','')}</td><td>{item.get('status','')}</td><td>{item.get('result_count',0)}</td><td>{len(item.get('alerts',[]))}</td></tr>" for item in runs)
+    return f"<section><h2>{title}</h2><table><tr><th>Started</th><th>Job</th><th>Status</th><th>Results</th><th>Alerts</th></tr>{rows}</table></section>"
 
 
 def scheduler_table() -> str:
@@ -2004,6 +2245,39 @@ async def run_research_workflow(request: ResearchWorkflowRequest) -> Dict[str, A
         build_analysis_response,
         maybe_enhance_analysis,
     )
+
+
+async def automation_workflow_runner(spec: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        payload = get_template(spec["template"])
+    except KeyError:
+        return {"workflow_id": "", "status": "failed", "result_count": 0, "warnings": ["Automation template was not found."], "analysis": {}, "downloads": []}
+    allowed = set(ResearchWorkflowRequest.model_fields)
+    payload.update({key: value for key, value in spec.get("overrides", {}).items() if key in allowed})
+    payload["template_name"] = spec["template"]
+    return await run_research_workflow(ResearchWorkflowRequest(**payload))
+
+
+async def execute_automation_job(job: Dict[str, Any], scheduled_at: str = "") -> Dict[str, Any]:
+    return await run_automation_job(job, automation_workflow_runner, get_workflow, save_alert, send_automation_notifications, scheduled_at)
+
+
+async def automation_tick_once() -> List[Dict[str, Any]]:
+    return [await execute_automation_job(job) for job in due_jobs()]
+
+
+async def build_automation_digest(period: str, request: AutomationDigestRequest) -> AutomationDigestResponse:
+    runs = list_automation_runs(200)
+    window_hours = 24 if period == "daily" else 24 * 7
+    cutoff = datetime.utcnow() - timedelta(hours=window_hours)
+    recent = [item for item in runs if item.get("completed_at") and datetime.fromisoformat(item["completed_at"].replace("Z", "")) >= cutoff]
+    alerts_data = [AlertItem(**item) for item in list_alerts(100) if item.get("created_at") and datetime.fromisoformat(str(item["created_at"]).replace("Z", "")) >= cutoff]
+    reports = [ReportFileItem(**item) for item in recent_reports(20)]
+    top_changes = [f"{item.get('job_name', '')}: {item.get('result_count', 0)} results" for item in recent[:10]]
+    warnings: List[str] = []
+    if request.send_notifications:
+        warnings.extend(await send_automation_notifications(request.notification_channels, {"job_name": f"{period.title()} automation digest", "run_status": "completed", "workflow_id": "", "result_count": sum(item.get("result_count", 0) for item in recent), "warning_count": sum(len(item.get("warnings", [])) for item in recent), "alert_count": len(alerts_data), "summary": "; ".join(top_changes[:3]), "downloads": [{"download_url": item.download_url} for item in reports[:5]], "dashboard_url": "/ui/automation"}))
+    return AutomationDigestResponse(period=period, completed_jobs=len([item for item in recent if item.get("status") == "completed"]), failed_jobs=len([item for item in recent if item.get("status") == "failed"]), new_alerts=alerts_data, top_changes=top_changes, latest_reports=reports, download_links=[item.download_url for item in reports], warnings=warnings)
 
 
 def build_analysis_response(request: AnalysisRequest, pipeline: Dict[str, Any]) -> AnalysisResponse:

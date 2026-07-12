@@ -1709,6 +1709,7 @@ components:
             - reddit
             - google_news
             - hacker_news
+            - github_releases
             - rss
             - manual_csv
           type: array
@@ -1797,6 +1798,7 @@ components:
             - reddit
             - google_news
             - hacker_news
+            - github_releases
             - rss
             - manual_csv
           type: array
@@ -1877,6 +1879,7 @@ components:
             - reddit
             - google_news
             - hacker_news
+            - github_releases
             - rss
             - manual_csv
           type: array
@@ -1978,6 +1981,7 @@ components:
             - reddit
             - google_news
             - hacker_news
+            - github_releases
             - rss
             - manual_csv
           type: array
@@ -2198,6 +2202,7 @@ components:
             - reddit
             - google_news
             - hacker_news
+            - github_releases
             - rss
             - manual_csv
           type: array
@@ -2852,6 +2857,7 @@ components:
             - reddit
             - google_news
             - hacker_news
+            - github_releases
             - rss
             - manual_csv
           type: array
@@ -3123,6 +3129,7 @@ components:
             - reddit
             - google_news
             - hacker_news
+            - github_releases
             - rss
             - manual_csv
           type: array
@@ -3255,6 +3262,7 @@ components:
             - reddit
             - google_news
             - hacker_news
+            - github_releases
             - rss
             - manual_csv
           type: array
@@ -3405,6 +3413,7 @@ components:
               - reddit
               - google_news
               - hacker_news
+              - github_releases
               - rss
               - manual_csv
             type: array
@@ -3631,6 +3640,7 @@ components:
             - reddit
             - google_news
             - hacker_news
+            - github_releases
             - rss
             - manual_csv
           type: array
@@ -3899,6 +3909,7 @@ components:
             - reddit
             - google_news
             - hacker_news
+            - github_releases
             - rss
             - manual_csv
           type: array
@@ -3959,6 +3970,7 @@ components:
             - reddit
             - google_news
             - hacker_news
+            - github_releases
             - rss
             - manual_csv
           type: array
@@ -4193,6 +4205,7 @@ components:
             - reddit
             - google_news
             - hacker_news
+            - github_releases
             - rss
             - manual_csv
           type: array
@@ -4312,6 +4325,21 @@ components:
           title: Discussion Url
           description: Public discussion URL when the source provides one.
           default: ''
+        repo:
+          type: string
+          title: Repo
+          description: Public repository identifier when the source provides one.
+          default: ''
+        version:
+          type: string
+          title: Version
+          description: Release version when the source provides one.
+          default: ''
+        release_notes:
+          type: string
+          title: Release Notes
+          description: Public release notes when the source provides them.
+          default: ''
         author:
           type: string
           title: Author
@@ -4414,6 +4442,7 @@ components:
           - reddit
           - google_news
           - hacker_news
+          - github_releases
           - rss
           - manual_csv
           title: Name
@@ -4488,6 +4517,7 @@ components:
             - reddit
             - google_news
             - hacker_news
+            - github_releases
             - rss
             - manual_csv
           type: array

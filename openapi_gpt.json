@@ -1125,6 +1125,7 @@
                 "reddit",
                 "google_news",
                 "hacker_news",
+                "github_releases",
                 "rss",
                 "manual_csv"
               ]
@@ -1239,6 +1240,7 @@
                 "reddit",
                 "google_news",
                 "hacker_news",
+                "github_releases",
                 "rss",
                 "manual_csv"
               ]
@@ -1348,6 +1350,7 @@
                 "reddit",
                 "google_news",
                 "hacker_news",
+                "github_releases",
                 "rss",
                 "manual_csv"
               ]
@@ -1492,6 +1495,7 @@
                 "reddit",
                 "google_news",
                 "hacker_news",
+                "github_releases",
                 "rss",
                 "manual_csv"
               ]
@@ -1782,6 +1786,7 @@
                 "reddit",
                 "google_news",
                 "hacker_news",
+                "github_releases",
                 "rss",
                 "manual_csv"
               ]
@@ -2733,6 +2738,7 @@
                 "reddit",
                 "google_news",
                 "hacker_news",
+                "github_releases",
                 "rss",
                 "manual_csv"
               ]
@@ -3129,6 +3135,7 @@
                 "reddit",
                 "google_news",
                 "hacker_news",
+                "github_releases",
                 "rss",
                 "manual_csv"
               ]
@@ -3318,6 +3325,7 @@
                 "reddit",
                 "google_news",
                 "hacker_news",
+                "github_releases",
                 "rss",
                 "manual_csv"
               ]
@@ -3543,6 +3551,7 @@
                     "reddit",
                     "google_news",
                     "hacker_news",
+                    "github_releases",
                     "rss",
                     "manual_csv"
                   ]
@@ -3915,6 +3924,7 @@
                 "reddit",
                 "google_news",
                 "hacker_news",
+                "github_releases",
                 "rss",
                 "manual_csv"
               ]
@@ -4267,6 +4277,7 @@
                 "reddit",
                 "google_news",
                 "hacker_news",
+                "github_releases",
                 "rss",
                 "manual_csv"
               ]
@@ -4345,6 +4356,7 @@
                 "reddit",
                 "google_news",
                 "hacker_news",
+                "github_releases",
                 "rss",
                 "manual_csv"
               ]
@@ -4673,6 +4685,7 @@
                 "reddit",
                 "google_news",
                 "hacker_news",
+                "github_releases",
                 "rss",
                 "manual_csv"
               ]
@@ -4842,6 +4855,24 @@
             "description": "Public discussion URL when the source provides one.",
             "default": ""
           },
+          "repo": {
+            "type": "string",
+            "title": "Repo",
+            "description": "Public repository identifier when the source provides one.",
+            "default": ""
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Release version when the source provides one.",
+            "default": ""
+          },
+          "release_notes": {
+            "type": "string",
+            "title": "Release Notes",
+            "description": "Public release notes when the source provides them.",
+            "default": ""
+          },
           "author": {
             "type": "string",
             "title": "Author",
@@ -4992,6 +5023,7 @@
               "reddit",
               "google_news",
               "hacker_news",
+              "github_releases",
               "rss",
               "manual_csv"
             ],
@@ -5089,6 +5121,7 @@
                 "reddit",
                 "google_news",
                 "hacker_news",
+                "github_releases",
                 "rss",
                 "manual_csv"
               ]

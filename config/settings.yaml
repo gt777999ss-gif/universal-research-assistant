@@ -13,6 +13,20 @@ sources:
     enabled: true
     endpoint: https://hn.algolia.com/api/v1/search_by_date
     requires_api_key: false
+  github_releases:
+    enabled: true
+    endpoint: https://api.github.com/repos/{owner}/{repo}/releases
+    requires_api_key: false
+    repositories:
+      - comfyanonymous/ComfyUI
+      - Comfy-Org/ComfyUI-Manager
+      - huggingface/diffusers
+      - huggingface/transformers
+      - Lightricks/LTX-Video
+      - THUDM/CogVideo
+      - hunyuanvideo/HunyuanVideo
+      - Open-Sora/Open-Sora
+      - AILab-CVC/VideoCrafter
   rss:
     enabled: true
     # Verified 2026-07-11 with RSS/Atom Accept headers.

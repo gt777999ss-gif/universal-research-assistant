@@ -22,10 +22,12 @@ def rank_results(results: List[Dict[str, Any]], query: str) -> List[Dict[str, An
 
 def source_relevance(item: Dict[str, Any], query: str) -> float:
     score = relevance_score(query, item)
-    if item.get("source") == "hacker_news":
+    if item.get("source") in {"hacker_news", "github_releases"}:
         query_terms = set(str(query).lower().split())
-        title_terms = set(str(item.get("title", "")).lower().split())
+        title_terms = set(f"{item.get('repo', '')} {item.get('title', '')}".lower().split())
         score += len(query_terms.intersection(title_terms))
+    if item.get("source") == "github_releases":
+        score += 0.25
     return score
 
 

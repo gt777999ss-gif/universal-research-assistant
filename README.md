@@ -141,6 +141,7 @@ Each source has its own collector module and returns a common `SearchResult` mod
 |---|---|---|
 | `google_news` | `collectors/google_news_collector.py` | Uses public Google News RSS. |
 | `hacker_news` | `collectors/hacker_news_collector.py` | Uses the official Hacker News Algolia Search API; no API key is required. |
+| `github_releases` | `collectors/github_releases_collector.py` | Uses public GitHub Releases API data for configured AI-video repositories; no API key is required. |
 | `reddit` | `collectors/reddit_collector.py` | Disabled by default. Enable only with `REDDIT_ENABLED=true` and complete Reddit OAuth credentials. |
 | `youtube` | `collectors/youtube_collector.py` | Uses the official YouTube Data API when `YOUTUBE_API_KEY` is configured. |
 | `x` | `collectors/x_collector.py` | Uses the official X API when `X_BEARER_TOKEN` is configured. |
@@ -171,6 +172,14 @@ To add a feed, first verify that it is an official public RSS/Atom/XML URL with 
 
 ```bash
 python3 scripts/test_hackernews_source.py --query "AI video" --days 30 --limit 10
+```
+
+### GitHub Releases
+
+`github_releases` monitors public releases from ComfyUI, ComfyUI-Manager, Diffusers, Transformers, LTX-Video, CogVideo, HunyuanVideo, Open-Sora, and VideoCrafter. It keeps repository, version, release date, cleaned release notes, and the public release URL. Each watched repository is handled independently, so one API failure does not stop the remaining repositories.
+
+```bash
+python3 scripts/test_github_releases.py
 ```
 
 ## Analyzer Modules

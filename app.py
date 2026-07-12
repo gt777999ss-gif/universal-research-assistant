@@ -2556,7 +2556,7 @@ def source_status(source: SourceName) -> SourceStatus:
             available=True,
             requires_api_key=False,
             configured=configured,
-            note="Uses Reddit OAuth when REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET are configured; otherwise uses a public fallback that may be blocked.",
+            note="Uses OAuth when REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET are configured; public 403 responses use an RSS fallback when available.",
         )
     if source == "tiktok":
         return SourceStatus(

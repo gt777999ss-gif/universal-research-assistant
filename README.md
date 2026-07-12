@@ -140,6 +140,7 @@ Each source has its own collector module and returns a common `SearchResult` mod
 | Source ID | Collector | Notes |
 |---|---|---|
 | `google_news` | `collectors/google_news_collector.py` | Uses public Google News RSS. |
+| `hacker_news` | `collectors/hacker_news_collector.py` | Uses the official Hacker News Algolia Search API; no API key is required. |
 | `reddit` | `collectors/reddit_collector.py` | Disabled by default. Enable only with `REDDIT_ENABLED=true` and complete Reddit OAuth credentials. |
 | `youtube` | `collectors/youtube_collector.py` | Uses the official YouTube Data API when `YOUTUBE_API_KEY` is configured. |
 | `x` | `collectors/x_collector.py` | Uses the official X API when `X_BEARER_TOKEN` is configured. |
@@ -163,6 +164,14 @@ python3 scripts/test_html_cleaning.py
 ```
 
 To add a feed, first verify that it is an official public RSS/Atom/XML URL with an XML content type or parseable feed body. Add it under `sources.rss.feeds` in `config/settings.yaml` with `enabled: true`; otherwise add only a disabled entry and a verification note.
+
+### Hacker News
+
+`hacker_news` uses the official no-key Algolia Hacker News `search_by_date` API. Results include story points, comment count, and an HN discussion link; stories without an external URL use that discussion link as their result URL. AI-video weekly searches retain only relevant tools, releases, models, workflows, and industry developments.
+
+```bash
+python3 scripts/test_hackernews_source.py --query "AI video" --days 30 --limit 10
+```
 
 ## Analyzer Modules
 

@@ -709,6 +709,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - hacker_news
             - rss
             - manual_csv
           type: array
@@ -796,6 +797,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - hacker_news
             - rss
             - manual_csv
           type: array
@@ -875,6 +877,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - hacker_news
             - rss
             - manual_csv
           type: array
@@ -981,6 +984,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - hacker_news
             - rss
             - manual_csv
           type: array
@@ -1200,6 +1204,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - hacker_news
             - rss
             - manual_csv
           type: array
@@ -1881,6 +1886,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - hacker_news
             - rss
             - manual_csv
           type: array
@@ -2164,6 +2170,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - hacker_news
             - rss
             - manual_csv
           type: array
@@ -2303,6 +2310,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - hacker_news
             - rss
             - manual_csv
           type: array
@@ -2463,6 +2471,7 @@ components:
               - tiktok
               - reddit
               - google_news
+              - hacker_news
               - rss
               - manual_csv
             type: array
@@ -2704,6 +2713,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - hacker_news
             - rss
             - manual_csv
           type: array
@@ -2974,6 +2984,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - hacker_news
             - rss
             - manual_csv
           type: array
@@ -3033,6 +3044,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - hacker_news
             - rss
             - manual_csv
           type: array
@@ -3278,6 +3290,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - hacker_news
             - rss
             - manual_csv
           type: array
@@ -3398,6 +3411,11 @@ components:
           title: Url
           description: Canonical result URL.
           default: ''
+        discussion_url:
+          type: string
+          title: Discussion Url
+          description: Public discussion URL when the source provides one.
+          default: ''
         author:
           type: string
           title: Author
@@ -3499,6 +3517,7 @@ components:
           - tiktok
           - reddit
           - google_news
+          - hacker_news
           - rss
           - manual_csv
           title: Name
@@ -3572,6 +3591,7 @@ components:
             - tiktok
             - reddit
             - google_news
+            - hacker_news
             - rss
             - manual_csv
           type: array

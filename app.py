@@ -70,14 +70,14 @@ from research_workflows.templates import get_template, list_templates
 from scheduler.scheduler import MonitorScheduler
 
 
-SourceName = Literal["youtube", "x", "tiktok", "reddit", "google_news", "rss", "manual_csv"]
+SourceName = Literal["youtube", "x", "tiktok", "reddit", "google_news", "hacker_news", "rss", "manual_csv"]
 AnalysisType = Literal["general", "trend", "market", "competitor", "customer_feedback", "risk", "opportunity"]
 MonitorFrequency = Literal["hourly", "daily", "weekly"]
 NotificationChannel = Literal["email", "telegram", "discord", "webhook"]
 AIProviderName = Literal["auto", "gemini", "openai", "none"]
 ReportExportFormat = Literal["markdown", "html", "json", "pdf"]
 DEFAULT_SOURCES: List[SourceName] = ["google_news"]
-ALL_SOURCES: List[SourceName] = ["google_news", "reddit", "youtube", "x", "tiktok", "rss", "manual_csv"]
+ALL_SOURCES: List[SourceName] = ["google_news", "hacker_news", "reddit", "youtube", "x", "tiktok", "rss", "manual_csv"]
 LOGGER = logging.getLogger(__name__)
 
 
@@ -2568,6 +2568,14 @@ def source_status(source: SourceName) -> SourceStatus:
             requires_api_key=True,
             configured=reddit["oauth_configured"],
             note=note,
+        )
+    if source == "hacker_news":
+        return SourceStatus(
+            name=source,
+            available=True,
+            requires_api_key=False,
+            configured=True,
+            note="Uses the official Hacker News Algolia Search API; no API key is required.",
         )
     if source == "tiktok":
         return SourceStatus(

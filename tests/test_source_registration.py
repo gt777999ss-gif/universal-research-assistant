@@ -12,10 +12,16 @@ class SourceRegistrationTests(unittest.TestCase):
         self.assertNotIn("web", DEFAULT_SOURCES)
         self.assertEqual(source_warnings(ResearchRequest(query="AI video tools").sources), [])
 
+    def test_hacker_news_is_available_without_an_api_key(self):
+        status = source_status("hacker_news")
+        self.assertTrue(status.available)
+        self.assertFalse(status.requires_api_key)
+        self.assertTrue(status.configured)
+
     def test_ai_video_weekly_uses_active_sources_only(self):
         template = get_template("ai_video_weekly")
         self.assertNotIn("web", template["sources"])
-        self.assertEqual(template["sources"], ["google_news", "youtube", "rss"])
+        self.assertEqual(template["sources"], ["google_news", "youtube", "rss", "hacker_news"])
 
     def test_reddit_is_disabled_without_explicit_opt_in(self):
         original = {name: os.environ.get(name) for name in ("REDDIT_ENABLED", "REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET", "REDDIT_USER_AGENT")}

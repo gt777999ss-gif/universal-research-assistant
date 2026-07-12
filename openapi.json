@@ -2735,6 +2735,7 @@
                 "tiktok",
                 "reddit",
                 "google_news",
+                "hacker_news",
                 "rss",
                 "manual_csv"
               ]
@@ -2848,6 +2849,7 @@
                 "tiktok",
                 "reddit",
                 "google_news",
+                "hacker_news",
                 "rss",
                 "manual_csv"
               ]
@@ -2956,6 +2958,7 @@
                 "tiktok",
                 "reddit",
                 "google_news",
+                "hacker_news",
                 "rss",
                 "manual_csv"
               ]
@@ -3089,6 +3092,7 @@
                 "tiktok",
                 "reddit",
                 "google_news",
+                "hacker_news",
                 "rss",
                 "manual_csv"
               ]
@@ -3378,6 +3382,7 @@
                 "tiktok",
                 "reddit",
                 "google_news",
+                "hacker_news",
                 "rss",
                 "manual_csv"
               ]
@@ -4282,6 +4287,7 @@
                 "tiktok",
                 "reddit",
                 "google_news",
+                "hacker_news",
                 "rss",
                 "manual_csv"
               ]
@@ -4655,6 +4661,7 @@
                 "tiktok",
                 "reddit",
                 "google_news",
+                "hacker_news",
                 "rss",
                 "manual_csv"
               ]
@@ -4830,6 +4837,7 @@
                 "tiktok",
                 "reddit",
                 "google_news",
+                "hacker_news",
                 "rss",
                 "manual_csv"
               ]
@@ -5036,6 +5044,7 @@
                     "tiktok",
                     "reddit",
                     "google_news",
+                    "hacker_news",
                     "rss",
                     "manual_csv"
                   ]
@@ -5381,6 +5390,7 @@
                 "tiktok",
                 "reddit",
                 "google_news",
+                "hacker_news",
                 "rss",
                 "manual_csv"
               ]
@@ -5727,6 +5737,7 @@
                 "tiktok",
                 "reddit",
                 "google_news",
+                "hacker_news",
                 "rss",
                 "manual_csv"
               ]
@@ -5804,6 +5815,7 @@
                 "tiktok",
                 "reddit",
                 "google_news",
+                "hacker_news",
                 "rss",
                 "manual_csv"
               ]
@@ -6111,6 +6123,7 @@
                 "tiktok",
                 "reddit",
                 "google_news",
+                "hacker_news",
                 "rss",
                 "manual_csv"
               ]
@@ -6264,6 +6277,12 @@
             "description": "Canonical result URL.",
             "default": ""
           },
+          "discussion_url": {
+            "type": "string",
+            "title": "Discussion Url",
+            "description": "Public discussion URL when the source provides one.",
+            "default": ""
+          },
           "author": {
             "type": "string",
             "title": "Author",
@@ -6413,6 +6432,7 @@
               "tiktok",
               "reddit",
               "google_news",
+              "hacker_news",
               "rss",
               "manual_csv"
             ],
@@ -6509,6 +6529,7 @@
                 "tiktok",
                 "reddit",
                 "google_news",
+                "hacker_news",
                 "rss",
                 "manual_csv"
               ]

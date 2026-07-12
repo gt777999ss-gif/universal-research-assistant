@@ -9,6 +9,7 @@ class SearchResult(BaseModel):
     source: str = Field(default="", description="Source that produced the result.")
     title: str = Field(default="", description="Result title.")
     url: str = Field(default="", description="Canonical result URL.")
+    discussion_url: str = Field(default="", description="Public discussion URL when the source provides one.")
     author: str = Field(default="", description="Public author, channel, source, or publisher when available.")
     date: Optional[str] = Field(default=None, description="Published date or indexed date when available.")
     summary: str = Field(default="", description="Short result summary.")

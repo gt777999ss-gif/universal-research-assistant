@@ -9,6 +9,10 @@ sources:
     api_key_env: YOUTUBE_API_KEY
   google_news:
     enabled: true
+  hacker_news:
+    enabled: true
+    endpoint: https://hn.algolia.com/api/v1/search_by_date
+    requires_api_key: false
   rss:
     enabled: true
     # Verified 2026-07-11 with RSS/Atom Accept headers.

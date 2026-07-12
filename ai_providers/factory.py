@@ -10,7 +10,7 @@ from ai_providers.openai_provider import analyze_with_openai
 
 def resolve_provider(requested: str = "auto") -> str:
     configured = (requested or "auto").lower()
-    env_provider = os.getenv("AI_PROVIDER", "auto").lower()
+    env_provider = os.getenv("AI_ANALYSIS_PROVIDER", os.getenv("AI_PROVIDER", "auto")).lower()
     provider = configured if configured != "auto" else env_provider
     if provider == "auto":
         if os.getenv("GEMINI_API_KEY"):
@@ -28,4 +28,3 @@ async def run_ai_analysis(query: str, results: List[Dict[str, Any]], language: s
     if provider == "openai":
         return await analyze_with_openai(query, results, language)
     return deterministic_ai_unavailable(provider)
-

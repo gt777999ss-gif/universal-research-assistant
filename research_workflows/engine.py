@@ -123,7 +123,7 @@ def build_workflow_report(topic: str, results: List[Dict[str, Any]], analysis: D
     recency = recency_distribution(results)
     facts = [traceable_result(item) for item in results[:20]]
     interpretation = {"executive_summary": analysis.get("executive_summary", ""), "recurring_themes": analysis.get("key_findings", []), "trend_signals": analysis.get("trends", []), "risks": analysis.get("risks", []), "opportunities": analysis.get("opportunities", [])}
-    report = {"title": f"Research Workflow Report: {topic}", "template": template_name, "generated_at": now(), "executive_summary": analysis.get("executive_summary", ""), "top_stories": facts[:5], "source_distribution": source_distribution, "recency_distribution": recency, "platform_comparison": source_distribution, "risks": analysis.get("risks", []), "opportunities": analysis.get("opportunities", []), "recommended_follow_up_queries": analysis.get("recommended_follow_up_queries", []), "confidence_notes": "Interpretation is deterministic and based on collected public-source relevance, recurrence, and recency signals. Optional AI enhancement is only reflected when a configured provider succeeds.", "verified_source_facts": facts, "deterministic_interpretation": interpretation, "forecast_or_inference": {"30_day_outlook": "Inference only: monitor recurring high-score themes and source diversity over the next 30 days; this is not a verified source fact."}, "source_references": [item["url"] for item in facts if item["url"]]}
+    report = {"title": f"Research Workflow Report: {topic}", "template": template_name, "generated_at": now(), "executive_summary": analysis.get("executive_summary", ""), "top_stories": facts[:5], "source_distribution": source_distribution, "recency_distribution": recency, "platform_comparison": source_distribution, "risks": analysis.get("risks", []), "opportunities": analysis.get("opportunities", []), "recommended_follow_up_queries": analysis.get("recommended_follow_up_queries", []), "confidence_notes": "Interpretation is deterministic and based on collected public-source relevance, recurrence, and recency signals. Optional AI enhancement is only reflected when a configured provider succeeds.", "verified_source_facts": facts, "deterministic_interpretation": interpretation, "forecast_or_inference": {"30_day_outlook": "Inference only: monitor recurring high-score themes and source diversity over the next 30 days; this is not a verified source fact."}, "source_references": [item["url"] for item in facts if item["url"]], "analysis": analysis.get("ai_video_analysis", {}), "analysis_mode": analysis.get("analysis_mode", "deterministic"), "provider_metadata": analysis.get("provider_metadata", {}), "fallback_reason": analysis.get("fallback_reason", "")}
     report["markdown"] = workflow_markdown(report)
     return report
 
@@ -148,7 +148,7 @@ def recency_distribution(results: List[Dict[str, Any]]) -> Dict[str, int]:
 def workflow_markdown(report: Dict[str, Any]) -> str:
     if report.get("template") == "tiktok_pet_thailand":
         return tiktok_pet_thailand_markdown(report)
-    lines = [f"# {report['title']}", "", "## Executive Summary", "", report["executive_summary"], "", "## Five Most Important Developments", ""]
+    lines = [f"# {report['title']}", "", f"Analysis mode: {report.get('analysis_mode', 'deterministic')}", "", "## Executive Summary", "", report["executive_summary"], "", "## Five Most Important Developments", ""]
     for item in report["top_stories"]:
         lines.append(f"- **{escape(item['title'])}** ({item['source']}, {item['date']}): {escape(item['summary'])}  ")
         lines.append(f"  Source: {item['url']}")
@@ -164,6 +164,17 @@ def workflow_markdown(report: Dict[str, Any]) -> str:
     lines.extend(["", "## Source References", ""])
     lines.extend(f"- {url}" for url in report["source_references"])
     lines.extend(["", "## Confidence Notes", "", report["confidence_notes"], ""])
+    if report.get("analysis"):
+        analysis = report["analysis"]
+        lines.extend(["## Top Five Weekly Trends", ""])
+        lines.extend(f"- **{item.get('trend_title', '')}** ({item.get('confidence', 'low')}): {item.get('explanation', '')}" for item in analysis.get("top_trends", []))
+        lines.extend(["", "## Product Comparison", "", "| Product | Evidence | Momentum | Confidence |", "|---|---:|---|---|"])
+        for item in analysis.get("product_comparison", []):
+            lines.append(f"| {item.get('product', '')} | {item.get('evidence_count', 0)} | {item.get('current_momentum', '')} | {item.get('confidence', '')} |")
+        lines.extend(["", "## Impact for creators and TikTok commerce", "", analysis.get("creator_commerce_impact", {}).get("short_form_video_production", ""), "", "## Forecasts", ""])
+        lines.extend(f"- **{item.get('horizon', '')}**: {item.get('forecast_statement', '')}" for item in analysis.get("forecasts", []))
+        lines.extend(["", "## Watchlist", ""])
+        lines.extend(f"- {item.get('product_company', '')}: {item.get('signal_to_monitor', '')}" for item in analysis.get("watchlist", []))
     return "\n".join(lines)
 
 

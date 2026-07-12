@@ -13,10 +13,10 @@ async def analyze_with_gemini(query: str, results: List[Dict[str, Any]], languag
     if not api_key:
         return deterministic_ai_unavailable("gemini")
     prompt = build_analysis_prompt(query, results, language)
-    model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    model = os.getenv("AI_ANALYSIS_MODEL", os.getenv("GEMINI_MODEL", "gemini-1.5-flash"))
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx.AsyncClient(timeout=float(os.getenv("AI_ANALYSIS_TIMEOUT_SECONDS", "30"))) as client:
         response = await client.post(url, params={"key": api_key}, json=payload)
         response.raise_for_status()
     data = response.json()
@@ -28,4 +28,3 @@ async def analyze_with_gemini(query: str, results: List[Dict[str, Any]], languag
         if isinstance(part, dict)
     )
     return {"provider": "gemini", "available": True, "warning": "", "content": content}
-

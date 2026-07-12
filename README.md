@@ -244,11 +244,28 @@ Optional AI provider variables:
 
 ```bash
 AI_PROVIDER=auto
+AI_ANALYSIS_ENABLED=false
+AI_ANALYSIS_PROVIDER=auto
+AI_ANALYSIS_MODEL=
+AI_ANALYSIS_TIMEOUT_SECONDS=30
+AI_ANALYSIS_MAX_ITEMS=20
 GEMINI_API_KEY=...
 OPENAI_API_KEY=...
 ```
 
 `AI_PROVIDER` supports `auto`, `gemini`, `openai`, and `none`. If no AI key is configured, the API keeps deterministic analysis working and returns a warning when `use_ai` is requested.
+
+### AI-Enhanced Weekly Analysis
+
+AI-video weekly analysis always begins with deterministic evidence scoring, source-aware clusters, product comparison rows, forecasts, and a watchlist. Set `AI_ANALYSIS_ENABLED=true` and pass `use_ai: true` to allow the configured OpenAI or Gemini provider to improve the structured analysis. Gemini is never required.
+
+Provider output must be JSON using only supplied evidence IDs. Invalid JSON, missing fields, provider errors, timeouts, rate limits, and unknown citations are rejected; the deterministic report is retained with a sanitized fallback warning. The service never sends provider credentials in responses or logs.
+
+```bash
+python3 scripts/test_ai_analysis.py --template ai_video_weekly --fixture
+```
+
+Use `AI_ANALYSIS_MAX_ITEMS` to bound evidence sent to a provider and `AI_ANALYSIS_TIMEOUT_SECONDS` to cap provider latency. Set `AI_ANALYSIS_PROVIDER` to `openai`, `gemini`, `auto`, or `none`; existing `OPENAI_API_KEY` and `GEMINI_API_KEY` credentials are reused.
 
 Optional notification webhook:
 

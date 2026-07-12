@@ -1988,6 +1988,36 @@
             "type": "string",
             "title": "Markdown Report",
             "default": ""
+          },
+          "ai_video_analysis": {
+            "type": "object",
+            "title": "Ai Video Analysis",
+            "properties": {
+              "data": {
+                "type": "string",
+                "description": "Serialized response data."
+              }
+            }
+          },
+          "analysis_mode": {
+            "type": "string",
+            "title": "Analysis Mode",
+            "default": "deterministic"
+          },
+          "provider_metadata": {
+            "type": "object",
+            "title": "Provider Metadata",
+            "properties": {
+              "data": {
+                "type": "string",
+                "description": "Serialized response data."
+              }
+            }
+          },
+          "fallback_reason": {
+            "type": "string",
+            "title": "Fallback Reason",
+            "default": ""
           }
         },
         "type": "object",

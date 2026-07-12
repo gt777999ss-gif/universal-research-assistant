@@ -15,11 +15,11 @@ async def analyze_with_openai(query: str, results: List[Dict[str, Any]], languag
     prompt = build_analysis_prompt(query, results, language)
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {
-        "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+        "model": os.getenv("AI_ANALYSIS_MODEL", os.getenv("OPENAI_MODEL", "gpt-4.1-mini")),
         "input": prompt,
         "max_output_tokens": 700,
     }
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx.AsyncClient(timeout=float(os.getenv("AI_ANALYSIS_TIMEOUT_SECONDS", "30"))) as client:
         response = await client.post("https://api.openai.com/v1/responses", headers=headers, json=payload)
         response.raise_for_status()
     data = response.json()
@@ -32,4 +32,3 @@ async def analyze_with_openai(query: str, results: List[Dict[str, Any]], languag
             if isinstance(part, dict)
         )
     return {"provider": "openai", "available": True, "warning": "", "content": content}
-

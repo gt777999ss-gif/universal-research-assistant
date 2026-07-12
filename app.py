@@ -23,6 +23,7 @@ from ai_providers.factory import run_ai_analysis
 from automation.service import AutomationScheduler, PRESETS, create_job as create_automation_job, due_jobs, next_run_at, run_job as run_automation_job, update_job as update_automation_job
 from automation.store import delete_job as delete_automation_job, get_job as get_automation_job, get_run as get_automation_run, list_jobs as list_automation_jobs, list_runs as list_automation_runs
 from analyzers.opportunity_analyzer import analyze_opportunities
+from analyzers.ai_video_analysis import build_deterministic_ai_video_analysis, is_ai_video_query, validate_ai_analysis
 from analyzers.report_builder import (
     build_executive_summary,
     build_markdown_report,
@@ -196,6 +197,10 @@ class AnalysisResponse(BaseModel):
     top_results: List[SearchResult] = Field(default_factory=list)
     recommended_follow_up_queries: List[str] = Field(default_factory=list)
     markdown_report: str = ""
+    ai_video_analysis: Dict[str, Any] = Field(default_factory=dict)
+    analysis_mode: str = "deterministic"
+    provider_metadata: Dict[str, str] = Field(default_factory=dict)
+    fallback_reason: str = ""
 
 
 class ReportResponse(BaseModel):
@@ -2308,7 +2313,7 @@ async def maybe_enhance_analysis(
     request: AnalysisRequest,
     pipeline: Dict[str, Any],
 ) -> AnalysisResponse:
-    if not request.use_ai or request.ai_provider == "none":
+    if not request.use_ai or request.ai_provider == "none" or os.getenv("AI_ANALYSIS_ENABLED", "false").lower() not in {"1", "true", "yes", "on"}:
         return analysis
     try:
         language = resolve_output_language(request, pipeline["original_queries"])
@@ -2316,12 +2321,42 @@ async def maybe_enhance_analysis(
         if ai_result.get("warning"):
             analysis.warnings = unique_strings(analysis.warnings + [ai_result["warning"]])
         content = str(ai_result.get("content", "")).strip()
-        if content:
+        if content and analysis.ai_video_analysis:
+            validated, warning = validate_ai_analysis(content, set(analysis.ai_video_analysis.get("evidence_map", {})))
+            if validated:
+                validated["evidence_map"] = analysis.ai_video_analysis["evidence_map"]
+                analysis.ai_video_analysis = validated
+                analysis.ai_video_analysis.setdefault("analysis_metadata", {}).update({"analysis_mode": "ai_enhanced", "provider": ai_result.get("provider", "")})
+                analysis.analysis_mode = "ai_enhanced"
+                analysis.provider_metadata = {"provider": str(ai_result.get("provider", "")), "prompt_version": str(validated.get("analysis_metadata", {}).get("prompt_version", ""))}
+                analysis.executive_summary = str(validated["executive_summary"])
+                analysis.markdown_report += render_ai_video_markdown(validated, "AI-enhanced")
+            else:
+                analysis.fallback_reason = warning
+                analysis.warnings = unique_strings(analysis.warnings + [warning])
+        elif content:
             analysis.executive_summary = content
             analysis.markdown_report = f"# AI Enhanced Research Analysis: {query_label_from_request(request)}\n\n## Executive Summary\n\n{content}\n\n" + analysis.markdown_report
     except Exception as exc:
-        analysis.warnings = unique_strings(analysis.warnings + [f"AI enhancement failed; deterministic analysis was used. {exc}"])
+        analysis.fallback_reason = "AI enhancement failed; deterministic analysis was used."
+        analysis.warnings = unique_strings(analysis.warnings + [analysis.fallback_reason])
     return analysis
+
+
+def render_ai_video_markdown(payload: Dict[str, Any], mode: str) -> str:
+    lines = ["", "## AI Video Industry Analysis", "", f"Analysis mode: {mode}", "", "### Top Five Weekly Trends", ""]
+    for trend in payload.get("top_trends", [])[:5]:
+        lines.append(f"- **{trend.get('trend_title', '')}** ({trend.get('confidence', 'low')}): {trend.get('explanation', '')} Evidence: {', '.join(trend.get('supporting_evidence', []))}")
+    lines.extend(["", "### Product Comparison", "", "| Product | Development | Evidence | Momentum | Confidence |", "|---|---|---:|---|---|"])
+    for item in payload.get("product_comparison", []):
+        lines.append(f"| {item.get('product', '')} | {item.get('major_development_this_period', '')} | {item.get('evidence_count', 0)} | {item.get('current_momentum', '')} | {item.get('confidence', '')} |")
+    lines.extend(["", "### Impact for creators and TikTok commerce", "", str(payload.get("creator_commerce_impact", {}).get("short_form_video_production", "")), "", "### Forecasts", ""])
+    for item in payload.get("forecasts", []):
+        lines.append(f"- **{item.get('horizon', '')}** ({item.get('confidence', 'low')}): {item.get('forecast_statement', '')} Evidence: {', '.join(item.get('supporting_signals', []))}")
+    lines.extend(["", "### Watchlist", ""])
+    for item in payload.get("watchlist", []):
+        lines.append(f"- **{item.get('product_company', '')}**: {item.get('signal_to_monitor', '')} ({item.get('expected_time_horizon', '')})")
+    return "\n".join(lines) + "\n"
 
 
 def build_change_summary(topic: str, changes: Dict[str, List[str]], has_prior: bool) -> str:
@@ -2515,6 +2550,9 @@ def build_analysis_response(request: AnalysisRequest, pipeline: Dict[str, Any]) 
     )
     followups = recommended_followups(query_label, themes, request.analysis_type, output_language)
     markdown_report += "\n## Recommended Follow-up Queries\n\n" + "\n".join(f"- {item}" for item in followups) + "\n"
+    ai_video = build_deterministic_ai_video_analysis(results, query_label) if is_ai_video_query(query_label) else {}
+    if ai_video:
+        markdown_report += render_ai_video_markdown(ai_video, "deterministic")
     return AnalysisResponse(
         query=request.query or "",
         queries=request.queries,
@@ -2530,6 +2568,9 @@ def build_analysis_response(request: AnalysisRequest, pipeline: Dict[str, Any]) 
         top_results=[SearchResult(**item) if isinstance(item, dict) else item for item in results[:10]],
         recommended_follow_up_queries=followups,
         markdown_report=markdown_report,
+        ai_video_analysis=ai_video,
+        analysis_mode="deterministic",
+        provider_metadata={"provider": "none", "prompt_version": ai_video.get("analysis_metadata", {}).get("prompt_version", "")},
     )
 
 

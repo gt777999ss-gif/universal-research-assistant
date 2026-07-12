@@ -207,6 +207,14 @@ python3 scripts/test_arxiv_source.py --query "video generation" --days 30 --limi
 
 Use `ARXIV_ENABLED`, `ARXIV_MAX_RESULTS`, and `ARXIV_LOOKBACK_DAYS` to control conservative API use. The collector uses Atom/XML headers, bounded retries, and graceful empty/error handling.
 
+### Hugging Face Models
+
+`huggingface_models` uses the public Hugging Face models API without authentication. It filters AI-video models, rejects image-only/audio/LLM/dataset/space signals, and keeps raw metadata in JSON reports while Markdown/HTML remain concise.
+
+```bash
+python3 scripts/test_huggingface_models.py --days 30 --limit 20
+```
+
 ## Analyzer Modules
 
 V9 analysis and agent planning remain deterministic by default. AI enhancement is optional and only runs when `use_ai: true` and a configured provider key is available. Missing or invalid AI keys never block report generation.

@@ -1712,6 +1712,7 @@ components:
             - github_releases
             - github_commits
             - arxiv
+            - huggingface_models
             - rss
             - manual_csv
           type: array
@@ -1803,6 +1804,7 @@ components:
             - github_releases
             - github_commits
             - arxiv
+            - huggingface_models
             - rss
             - manual_csv
           type: array
@@ -1886,6 +1888,7 @@ components:
             - github_releases
             - github_commits
             - arxiv
+            - huggingface_models
             - rss
             - manual_csv
           type: array
@@ -1990,6 +1993,7 @@ components:
             - github_releases
             - github_commits
             - arxiv
+            - huggingface_models
             - rss
             - manual_csv
           type: array
@@ -2213,6 +2217,7 @@ components:
             - github_releases
             - github_commits
             - arxiv
+            - huggingface_models
             - rss
             - manual_csv
           type: array
@@ -2887,6 +2892,7 @@ components:
             - github_releases
             - github_commits
             - arxiv
+            - huggingface_models
             - rss
             - manual_csv
           type: array
@@ -3229,6 +3235,7 @@ components:
             - github_releases
             - github_commits
             - arxiv
+            - huggingface_models
             - rss
             - manual_csv
           type: array
@@ -3364,6 +3371,7 @@ components:
             - github_releases
             - github_commits
             - arxiv
+            - huggingface_models
             - rss
             - manual_csv
           type: array
@@ -3517,6 +3525,7 @@ components:
               - github_releases
               - github_commits
               - arxiv
+              - huggingface_models
               - rss
               - manual_csv
             type: array
@@ -3746,6 +3755,7 @@ components:
             - github_releases
             - github_commits
             - arxiv
+            - huggingface_models
             - rss
             - manual_csv
           type: array
@@ -4017,6 +4027,7 @@ components:
             - github_releases
             - github_commits
             - arxiv
+            - huggingface_models
             - rss
             - manual_csv
           type: array
@@ -4080,6 +4091,7 @@ components:
             - github_releases
             - github_commits
             - arxiv
+            - huggingface_models
             - rss
             - manual_csv
           type: array
@@ -4329,6 +4341,7 @@ components:
             - github_releases
             - github_commits
             - arxiv
+            - huggingface_models
             - rss
             - manual_csv
           type: array
@@ -4576,6 +4589,62 @@ components:
           title: Pdf Url
           description: Public PDF URL when available.
           default: ''
+        model_id:
+          type: string
+          title: Model Id
+          description: Public model identifier when available.
+          default: ''
+        downloads:
+          type: integer
+          title: Downloads
+          description: Public model downloads when available.
+          default: 0
+        created_at:
+          type: string
+          title: Created At
+          description: Created date when available.
+          default: ''
+        last_modified:
+          type: string
+          title: Last Modified
+          description: Last modified date when available.
+          default: ''
+        pipeline_tag:
+          type: string
+          title: Pipeline Tag
+          description: Model pipeline tag when available.
+          default: ''
+        hf_tags:
+          items:
+            type: string
+          type: array
+          title: Hf Tags
+          description: Public Hugging Face tags when available.
+        license:
+          type: string
+          title: License
+          description: Public license when available.
+          default: ''
+        model_url:
+          type: string
+          title: Model Url
+          description: Public model URL when available.
+          default: ''
+        paper_url:
+          type: string
+          title: Paper Url
+          description: Related paper URL when available.
+          default: ''
+        github_url:
+          type: string
+          title: Github Url
+          description: Related GitHub URL when available.
+          default: ''
+        description:
+          type: string
+          title: Description
+          description: Public model description when available.
+          default: ''
         author:
           type: string
           title: Author
@@ -4681,6 +4750,7 @@ components:
           - github_releases
           - github_commits
           - arxiv
+          - huggingface_models
           - rss
           - manual_csv
           title: Name
@@ -4758,6 +4828,7 @@ components:
             - github_releases
             - github_commits
             - arxiv
+            - huggingface_models
             - rss
             - manual_csv
           type: array

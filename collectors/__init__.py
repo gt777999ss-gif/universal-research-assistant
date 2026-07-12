@@ -2,6 +2,7 @@ from collectors.google_news_collector import collect_google_news
 from collectors.github_releases_collector import collect_github_releases
 from collectors.github_commits_collector import collect_github_commits
 from collectors.arxiv_collector import collect_arxiv
+from collectors.huggingface_models_collector import collect_huggingface_models
 from collectors.hacker_news_collector import collect_hacker_news
 from collectors.manual_csv_collector import collect_manual_csv
 from collectors.reddit_collector import collect_reddit
@@ -17,6 +18,7 @@ COLLECTORS = {
     "github_releases": collect_github_releases,
     "github_commits": collect_github_commits,
     "arxiv": collect_arxiv,
+    "huggingface_models": collect_huggingface_models,
     "hacker_news": collect_hacker_news,
     "reddit": collect_reddit,
     "rss": collect_rss,

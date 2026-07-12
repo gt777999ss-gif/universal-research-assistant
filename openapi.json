@@ -2738,6 +2738,7 @@
                 "hacker_news",
                 "github_releases",
                 "github_commits",
+                "arxiv",
                 "rss",
                 "manual_csv"
               ]
@@ -2854,6 +2855,7 @@
                 "hacker_news",
                 "github_releases",
                 "github_commits",
+                "arxiv",
                 "rss",
                 "manual_csv"
               ]
@@ -2965,6 +2967,7 @@
                 "hacker_news",
                 "github_releases",
                 "github_commits",
+                "arxiv",
                 "rss",
                 "manual_csv"
               ]
@@ -3101,6 +3104,7 @@
                 "hacker_news",
                 "github_releases",
                 "github_commits",
+                "arxiv",
                 "rss",
                 "manual_csv"
               ]
@@ -3393,6 +3397,7 @@
                 "hacker_news",
                 "github_releases",
                 "github_commits",
+                "arxiv",
                 "rss",
                 "manual_csv"
               ]
@@ -4322,6 +4327,7 @@
                 "hacker_news",
                 "github_releases",
                 "github_commits",
+                "arxiv",
                 "rss",
                 "manual_csv"
               ]
@@ -4787,6 +4793,7 @@
                 "hacker_news",
                 "github_releases",
                 "github_commits",
+                "arxiv",
                 "rss",
                 "manual_csv"
               ]
@@ -4965,6 +4972,7 @@
                 "hacker_news",
                 "github_releases",
                 "github_commits",
+                "arxiv",
                 "rss",
                 "manual_csv"
               ]
@@ -5174,6 +5182,7 @@
                     "hacker_news",
                     "github_releases",
                     "github_commits",
+                    "arxiv",
                     "rss",
                     "manual_csv"
                   ]
@@ -5522,6 +5531,7 @@
                 "hacker_news",
                 "github_releases",
                 "github_commits",
+                "arxiv",
                 "rss",
                 "manual_csv"
               ]
@@ -5871,6 +5881,7 @@
                 "hacker_news",
                 "github_releases",
                 "github_commits",
+                "arxiv",
                 "rss",
                 "manual_csv"
               ]
@@ -5951,6 +5962,7 @@
                 "hacker_news",
                 "github_releases",
                 "github_commits",
+                "arxiv",
                 "rss",
                 "manual_csv"
               ]
@@ -6273,6 +6285,7 @@
                 "hacker_news",
                 "github_releases",
                 "github_commits",
+                "arxiv",
                 "rss",
                 "manual_csv"
               ]
@@ -6536,6 +6549,58 @@
             "description": "Specific public source type.",
             "default": ""
           },
+          "arxiv_id": {
+            "type": "string",
+            "title": "Arxiv Id",
+            "description": "arXiv identifier when available.",
+            "default": ""
+          },
+          "abstract": {
+            "type": "string",
+            "title": "Abstract",
+            "description": "Public paper abstract when available.",
+            "default": ""
+          },
+          "authors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Authors",
+            "description": "Public paper authors when available."
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At",
+            "description": "Updated date when available.",
+            "default": ""
+          },
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Categories",
+            "description": "Public paper categories when available."
+          },
+          "primary_category": {
+            "type": "string",
+            "title": "Primary Category",
+            "description": "Primary paper category when available.",
+            "default": ""
+          },
+          "abstract_url": {
+            "type": "string",
+            "title": "Abstract Url",
+            "description": "Public abstract URL when available.",
+            "default": ""
+          },
+          "pdf_url": {
+            "type": "string",
+            "title": "Pdf Url",
+            "description": "Public PDF URL when available.",
+            "default": ""
+          },
           "author": {
             "type": "string",
             "title": "Author",
@@ -6688,6 +6753,7 @@
               "hacker_news",
               "github_releases",
               "github_commits",
+              "arxiv",
               "rss",
               "manual_csv"
             ],
@@ -6787,6 +6853,7 @@
                 "hacker_news",
                 "github_releases",
                 "github_commits",
+                "arxiv",
                 "rss",
                 "manual_csv"
               ]

@@ -197,6 +197,16 @@ python3 scripts/test_github_commits.py --repo huggingface/diffusers --days 7 --l
 
 Configure `GITHUB_COMMITS_ENABLED`, `GITHUB_COMMITS_LOOKBACK_DAYS`, `GITHUB_COMMITS_MAX_PER_REPO`, and `GITHUB_COMMITS_MAX_DETAIL_CALLS` to control public API use. Add only verified public repositories under `sources.github_commits.repositories` in `config/settings.yaml`.
 
+### arXiv Research
+
+`arxiv` uses the official public arXiv API without an API key. It searches date-filtered AI-video research, rejects image-only and generic multimodal papers, and classifies generation, editing, controllability, avatar, efficiency, evaluation, world-model, and dataset signals. Full abstracts remain in JSON reports; Markdown and HTML show only concise top paper signals.
+
+```bash
+python3 scripts/test_arxiv_source.py --query "video generation" --days 30 --limit 10
+```
+
+Use `ARXIV_ENABLED`, `ARXIV_MAX_RESULTS`, and `ARXIV_LOOKBACK_DAYS` to control conservative API use. The collector uses Atom/XML headers, bounded retries, and graceful empty/error handling.
+
 ## Analyzer Modules
 
 V9 analysis and agent planning remain deterministic by default. AI enhancement is optional and only runs when `use_ai: true` and a configured provider key is available. Missing or invalid AI keys never block report generation.

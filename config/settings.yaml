@@ -40,6 +40,11 @@ sources:
       - THUDM/CogVideo
       - AILab-CVC/VideoCrafter
       - Wan-Video/Wan2.1
+  arxiv:
+    enabled: true
+    max_results: 30
+    lookback_days: 7
+    categories: [cs.CV, cs.AI, cs.LG, cs.MM, stat.ML]
   rss:
     enabled: true
     # Verified 2026-07-11 with RSS/Atom Accept headers.

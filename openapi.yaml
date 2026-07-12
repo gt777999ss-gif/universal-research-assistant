@@ -410,7 +410,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResearchWorkflowResponse'
+                $ref: '#/components/schemas/CompactResearchWorkflowResponse'
               example:
                 workflow_id: 3f9fbfd9-9d16-4ec5-9c1f-4b8565956c00
                 status: completed
@@ -2940,6 +2940,74 @@ components:
       - analysis_type
       - executive_summary
       title: BatchTaskResponse
+    CompactResearchWorkflowResponse:
+      properties:
+        workflow_id:
+          type: string
+          title: Workflow Id
+        status:
+          type: string
+          title: Status
+        template:
+          type: string
+          title: Template
+          default: ''
+        topic:
+          type: string
+          title: Topic
+        started_at:
+          type: string
+          title: Started At
+        completed_at:
+          type: string
+          title: Completed At
+        analysis_mode:
+          type: string
+          title: Analysis Mode
+          default: deterministic
+        statistics:
+          $ref: '#/components/schemas/WorkflowStatistics'
+        downloads:
+          additionalProperties:
+            type: string
+          type: object
+          title: Downloads
+        summary:
+          type: string
+          maxLength: 1000
+          title: Summary
+          default: ''
+        warnings:
+          items:
+            type: string
+          type: array
+          title: Warnings
+        report_markdown:
+          type: string
+          title: Report Markdown
+          default: ''
+        report_html:
+          type: string
+          title: Report Html
+          default: ''
+        report_json:
+          additionalProperties: true
+          type: object
+          title: Report Json
+        raw_results:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Raw Results
+      type: object
+      required:
+      - workflow_id
+      - status
+      - topic
+      - started_at
+      - completed_at
+      title: CompactResearchWorkflowResponse
     CompareReportsRequest:
       properties:
         report_a:
@@ -4152,6 +4220,18 @@ components:
           examples:
           - days: 7
             use_ai: false
+        include_report:
+          type: boolean
+          title: Include Report
+          description: Include saved report content. Defaults to false for compact
+            Action responses.
+          default: false
+        include_raw:
+          type: boolean
+          title: Include Raw
+          description: Include traceable raw evidence only when include_report is
+            true. Defaults to false.
+          default: false
       type: object
       required:
       - template
@@ -4734,6 +4814,23 @@ components:
       - started_at
       - completed_at
       title: WorkflowStage
+    WorkflowStatistics:
+      properties:
+        total_results:
+          type: integer
+          title: Total Results
+          default: 0
+        kept_results:
+          type: integer
+          title: Kept Results
+          default: 0
+        source_counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Source Counts
+      type: object
+      title: WorkflowStatistics
   securitySchemes:
     APIKeyHeader:
       type: apiKey

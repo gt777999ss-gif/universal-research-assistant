@@ -1,4 +1,5 @@
 import os
+import json
 import unittest
 from datetime import datetime
 
@@ -39,7 +40,24 @@ class TemplateActionsTests(unittest.TestCase):
         self.assertIn("ai_video_weekly", [item["id"] for item in templates.json()["templates"]])
         run = self.client.post("/research/run-template", headers=self.headers, json={"template": "ai_video_weekly"})
         self.assertEqual(run.status_code, 200)
-        self.assertEqual(run.json()["status"], "completed")
+        compact = run.json()
+        self.assertEqual(compact["status"], "completed")
+        self.assertIn("statistics", compact)
+        self.assertIn("downloads", compact)
+        self.assertLessEqual(len(compact["summary"]), 1000)
+        self.assertNotIn("report_markdown", compact)
+        self.assertNotIn("report_html", compact)
+        self.assertNotIn("report_json", compact)
+        self.assertNotIn("raw_results", compact)
+        self.assertLess(len(json.dumps(compact)), 8000)
+        expanded = self.client.post("/research/run-template", headers=self.headers, json={"template": "ai_video_weekly", "include_report": True})
+        self.assertEqual(expanded.status_code, 200)
+        self.assertTrue(expanded.json()["report_markdown"])
+        self.assertTrue(expanded.json()["report_html"])
+        self.assertTrue(expanded.json()["report_json"])
+        self.assertNotIn("raw_results", expanded.json())
+        raw = self.client.post("/research/run-template", headers=self.headers, json={"template": "ai_video_weekly", "include_report": True, "include_raw": True})
+        self.assertTrue(raw.json()["raw_results"])
         missing = self.client.post("/research/run-template", headers=self.headers, json={"template": "not-a-real-template"})
         self.assertEqual(missing.status_code, 404)
         schema = app_module.app.openapi()

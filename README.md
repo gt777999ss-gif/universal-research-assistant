@@ -61,6 +61,8 @@ V10 adds a local-first unified workflow API. `POST /research/run` executes these
 
 The response records every stage, warnings, traceable result fields, deterministic analysis, report sections, and download URLs. If an optional provider fails, the workflow continues with available sources. If no public results remain after collection and filtering, it returns `status: "failed"` without fabricating a report.
 
+`POST /research/run-template` is optimized for ChatGPT Actions: by default it returns only workflow metadata, compact statistics, report download URLs, warnings, and a summary capped at 1000 characters. Set `include_report: true` only when report content is explicitly needed; set `include_raw: true` only with `include_report` to include traceable raw facts. Full Markdown, HTML, and JSON remain stored under `reports/YYYY-MM-DD/` and use the existing download endpoints.
+
 Reusable templates are available through `GET /research/templates` and `POST /research/run-template`:
 
 - `ai_video_weekly`

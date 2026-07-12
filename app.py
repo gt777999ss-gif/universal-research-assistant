@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 from html import escape as html_escape
@@ -646,6 +647,32 @@ class RunTemplateRequest(BaseModel):
         description="Optional non-secret workflow overrides for the selected template.",
         examples=[{"days": 7, "use_ai": False}],
     )
+    include_report: bool = Field(default=False, description="Include saved report content. Defaults to false for compact Action responses.")
+    include_raw: bool = Field(default=False, description="Include traceable raw evidence only when include_report is true. Defaults to false.")
+
+
+class WorkflowStatistics(BaseModel):
+    total_results: int = 0
+    kept_results: int = 0
+    source_counts: Dict[str, int] = Field(default_factory=dict)
+
+
+class CompactResearchWorkflowResponse(BaseModel):
+    workflow_id: str
+    status: str
+    template: str = ""
+    topic: str
+    started_at: str
+    completed_at: str
+    analysis_mode: str = "deterministic"
+    statistics: WorkflowStatistics = Field(default_factory=WorkflowStatistics)
+    downloads: Dict[str, str] = Field(default_factory=dict)
+    summary: str = Field(default="", max_length=1000)
+    warnings: List[str] = Field(default_factory=list)
+    report_markdown: str = ""
+    report_html: str = ""
+    report_json: Dict[str, Any] = Field(default_factory=dict)
+    raw_results: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 AutomationScheduleType = Literal["hourly", "daily", "weekly", "manual"]
@@ -1098,7 +1125,8 @@ async def research_templates() -> ResearchTemplatesResponse:
 
 @app.post(
     "/research/run-template",
-    response_model=ResearchWorkflowResponse,
+    response_model=CompactResearchWorkflowResponse,
+    response_model_exclude_defaults=True,
     operation_id="runResearchTemplate",
     summary="Run an existing research template by exact template ID",
     description=(
@@ -1130,7 +1158,7 @@ async def research_templates() -> ResearchTemplatesResponse:
         },
     },
 )
-async def research_run_template(request: RunTemplateRequest) -> ResearchWorkflowResponse:
+async def research_run_template(request: RunTemplateRequest) -> CompactResearchWorkflowResponse:
     try:
         payload = get_template(request.template)
     except KeyError:
@@ -1138,7 +1166,8 @@ async def research_run_template(request: RunTemplateRequest) -> ResearchWorkflow
     allowed = set(ResearchWorkflowRequest.model_fields)
     payload.update({key: value for key, value in request.overrides.items() if key in allowed})
     payload["template_name"] = request.template
-    return ResearchWorkflowResponse(**await run_research_workflow(ResearchWorkflowRequest(**payload)))
+    result = await run_research_workflow(ResearchWorkflowRequest(**payload))
+    return CompactResearchWorkflowResponse(**compact_workflow_response(result, request.include_report, request.include_raw))
 
 
 @app.get("/automation/jobs", response_model=AutomationJobsResponse, operation_id="listAutomationJobs", dependencies=[Depends(verify_api_key)])
@@ -2442,6 +2471,69 @@ async def run_research_workflow(request: ResearchWorkflowRequest) -> Dict[str, A
         build_analysis_response,
         maybe_enhance_analysis,
     )
+
+
+def compact_workflow_response(workflow: Dict[str, Any], include_report: bool = False, include_raw: bool = False) -> Dict[str, Any]:
+    report = workflow.get("report", {})
+    analysis = workflow.get("analysis", {})
+    source_counts = {
+        str(item.get("source", "unknown")): int(item.get("result_count", 0))
+        for item in report.get("source_distribution", analysis.get("source_breakdown", []))
+        if item.get("source")
+    }
+    downloads = {"markdown": "", "html": "", "json": ""}
+    paths: Dict[str, str] = {}
+    for item in workflow.get("downloads", []):
+        output_format = str(item.get("format", ""))
+        if output_format in downloads:
+            downloads[output_format] = str(item.get("download_url", ""))
+            paths[output_format] = str(item.get("path", ""))
+    compact: Dict[str, Any] = {
+        "workflow_id": workflow.get("workflow_id", ""),
+        "status": workflow.get("status", ""),
+        "template": workflow.get("request", {}).get("template_name", ""),
+        "topic": workflow.get("topic", ""),
+        "started_at": workflow.get("started_at", ""),
+        "completed_at": workflow.get("completed_at", ""),
+        "analysis_mode": report.get("analysis_mode", analysis.get("analysis_mode", "deterministic")),
+        "statistics": {
+            "total_results": int(next((stage.get("metrics", {}).get("raw_result_count", 0) for stage in workflow.get("stages", []) if stage.get("name") == "collect"), workflow.get("result_count", 0))),
+            "kept_results": int(workflow.get("result_count", 0)),
+            "source_counts": source_counts,
+        },
+        "downloads": downloads,
+        "summary": compact_summary(report.get("executive_summary", analysis.get("executive_summary", ""))),
+        "warnings": workflow.get("warnings", []),
+    }
+    if include_report:
+        compact.update(read_compact_report_content(paths))
+        if include_raw:
+            compact["raw_results"] = report.get("verified_source_facts", [])
+    return compact
+
+
+def compact_summary(value: str) -> str:
+    text = " ".join(str(value or "").split())
+    sentences = [item.strip() for item in text.replace("!", ".").replace("?", ".").split(".") if item.strip()]
+    return ". ".join(sentences[:10])[:1000].rstrip(".") + ("." if sentences else "")
+
+
+def read_compact_report_content(paths: Dict[str, str]) -> Dict[str, Any]:
+    payload: Dict[str, Any] = {"report_markdown": "", "report_html": "", "report_json": {}, "raw_results": []}
+    for output_format, path_value in paths.items():
+        path = Path(path_value)
+        if not path.is_file():
+            continue
+        try:
+            if output_format == "json":
+                payload["report_json"] = json.loads(path.read_text(encoding="utf-8"))
+            elif output_format == "markdown":
+                payload["report_markdown"] = path.read_text(encoding="utf-8")
+            elif output_format == "html":
+                payload["report_html"] = path.read_text(encoding="utf-8")
+        except (OSError, ValueError):
+            continue
+    return payload
 
 
 def read_workflow_report_by_id(workflow_id: str) -> Dict[str, Any]:

@@ -27,6 +27,19 @@ sources:
       - hunyuanvideo/HunyuanVideo
       - Open-Sora/Open-Sora
       - AILab-CVC/VideoCrafter
+  github_commits:
+    enabled: true
+    lookback_days: 7
+    max_commits_per_repo: 30
+    repositories:
+      - comfyanonymous/ComfyUI
+      - Comfy-Org/ComfyUI-Manager
+      - huggingface/diffusers
+      - huggingface/transformers
+      - Lightricks/LTX-Video
+      - THUDM/CogVideo
+      - AILab-CVC/VideoCrafter
+      - Wan-Video/Wan2.1
   rss:
     enabled: true
     # Verified 2026-07-11 with RSS/Atom Accept headers.

@@ -1710,6 +1710,7 @@ components:
             - google_news
             - hacker_news
             - github_releases
+            - github_commits
             - rss
             - manual_csv
           type: array
@@ -1799,6 +1800,7 @@ components:
             - google_news
             - hacker_news
             - github_releases
+            - github_commits
             - rss
             - manual_csv
           type: array
@@ -1880,6 +1882,7 @@ components:
             - google_news
             - hacker_news
             - github_releases
+            - github_commits
             - rss
             - manual_csv
           type: array
@@ -1982,6 +1985,7 @@ components:
             - google_news
             - hacker_news
             - github_releases
+            - github_commits
             - rss
             - manual_csv
           type: array
@@ -2203,6 +2207,7 @@ components:
             - google_news
             - hacker_news
             - github_releases
+            - github_commits
             - rss
             - manual_csv
           type: array
@@ -2875,6 +2880,7 @@ components:
             - google_news
             - hacker_news
             - github_releases
+            - github_commits
             - rss
             - manual_csv
           type: array
@@ -3215,6 +3221,7 @@ components:
             - google_news
             - hacker_news
             - github_releases
+            - github_commits
             - rss
             - manual_csv
           type: array
@@ -3348,6 +3355,7 @@ components:
             - google_news
             - hacker_news
             - github_releases
+            - github_commits
             - rss
             - manual_csv
           type: array
@@ -3499,6 +3507,7 @@ components:
               - google_news
               - hacker_news
               - github_releases
+              - github_commits
               - rss
               - manual_csv
             type: array
@@ -3726,6 +3735,7 @@ components:
             - google_news
             - hacker_news
             - github_releases
+            - github_commits
             - rss
             - manual_csv
           type: array
@@ -3995,6 +4005,7 @@ components:
             - google_news
             - hacker_news
             - github_releases
+            - github_commits
             - rss
             - manual_csv
           type: array
@@ -4056,6 +4067,7 @@ components:
             - google_news
             - hacker_news
             - github_releases
+            - github_commits
             - rss
             - manual_csv
           type: array
@@ -4303,6 +4315,7 @@ components:
             - google_news
             - hacker_news
             - github_releases
+            - github_commits
             - rss
             - manual_csv
           type: array
@@ -4437,6 +4450,77 @@ components:
           title: Release Notes
           description: Public release notes when the source provides them.
           default: ''
+        commit_sha:
+          type: string
+          title: Commit Sha
+          description: Commit SHA when the source provides one.
+          default: ''
+        short_sha:
+          type: string
+          title: Short Sha
+          description: Short commit SHA when the source provides one.
+          default: ''
+        commit_url:
+          type: string
+          title: Commit Url
+          description: Public GitHub commit URL when available.
+          default: ''
+        api_url:
+          type: string
+          title: Api Url
+          description: Public API URL when available.
+          default: ''
+        parent_count:
+          type: integer
+          title: Parent Count
+          description: Commit parent count when available.
+          default: 0
+        verification_status:
+          type: string
+          title: Verification Status
+          description: Commit verification status when available.
+          default: ''
+        changed_files:
+          items:
+            type: string
+          type: array
+          title: Changed Files
+          description: Changed file paths when detail is available.
+        additions:
+          type: integer
+          title: Additions
+          description: Commit additions when detail is available.
+          default: 0
+        deletions:
+          type: integer
+          title: Deletions
+          description: Commit deletions when detail is available.
+          default: 0
+        classification:
+          type: string
+          title: Classification
+          description: Deterministic source classification.
+          default: ''
+        importance:
+          type: string
+          title: Importance
+          description: Deterministic importance label.
+          default: ''
+        confidence:
+          type: string
+          title: Confidence
+          description: Deterministic confidence label.
+          default: ''
+        rationale:
+          type: string
+          title: Rationale
+          description: Why the item was selected or classified.
+          default: ''
+        source_type:
+          type: string
+          title: Source Type
+          description: Specific public source type.
+          default: ''
         author:
           type: string
           title: Author
@@ -4540,6 +4624,7 @@ components:
           - google_news
           - hacker_news
           - github_releases
+          - github_commits
           - rss
           - manual_csv
           title: Name
@@ -4615,6 +4700,7 @@ components:
             - google_news
             - hacker_news
             - github_releases
+            - github_commits
             - rss
             - manual_csv
           type: array

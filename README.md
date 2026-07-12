@@ -184,6 +184,19 @@ python3 scripts/test_hackernews_source.py --query "AI video" --days 30 --limit 1
 python3 scripts/test_github_releases.py
 ```
 
+### GitHub Commit Monitor
+
+`github_commits` uses the public GitHub REST API to monitor configured AI-video repositories. Public mode needs no token and handles lower rate limits; an optional `GITHUB_TOKEN` uses Bearer authentication and should have only minimum read-only access for public repositories. Tokens are never logged or returned.
+
+The monitor fetches commit summaries first, filters routine noise, then limits optional detail calls. It groups related commits by repository and classification so reports show development signals rather than raw commit dumps. A repository `404`, rate-limit response, timeout, or malformed payload is isolated and does not stop other repositories.
+
+```bash
+python3 scripts/test_github_commits.py --days 7 --limit 20
+python3 scripts/test_github_commits.py --repo huggingface/diffusers --days 7 --limit 10
+```
+
+Configure `GITHUB_COMMITS_ENABLED`, `GITHUB_COMMITS_LOOKBACK_DAYS`, `GITHUB_COMMITS_MAX_PER_REPO`, and `GITHUB_COMMITS_MAX_DETAIL_CALLS` to control public API use. Add only verified public repositories under `sources.github_commits.repositories` in `config/settings.yaml`.
+
 ## Analyzer Modules
 
 V9 analysis and agent planning remain deterministic by default. AI enhancement is optional and only runs when `use_ai: true` and a configured provider key is available. Missing or invalid AI keys never block report generation.

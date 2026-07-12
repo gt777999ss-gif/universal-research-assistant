@@ -72,14 +72,14 @@ from research_workflows.templates import get_template, list_templates
 from scheduler.scheduler import MonitorScheduler
 
 
-SourceName = Literal["youtube", "x", "tiktok", "reddit", "google_news", "hacker_news", "github_releases", "rss", "manual_csv"]
+SourceName = Literal["youtube", "x", "tiktok", "reddit", "google_news", "hacker_news", "github_releases", "github_commits", "rss", "manual_csv"]
 AnalysisType = Literal["general", "trend", "market", "competitor", "customer_feedback", "risk", "opportunity"]
 MonitorFrequency = Literal["hourly", "daily", "weekly"]
 NotificationChannel = Literal["email", "telegram", "discord", "webhook"]
 AIProviderName = Literal["auto", "gemini", "openai", "none"]
 ReportExportFormat = Literal["markdown", "html", "json", "pdf"]
 DEFAULT_SOURCES: List[SourceName] = ["google_news"]
-ALL_SOURCES: List[SourceName] = ["google_news", "hacker_news", "github_releases", "reddit", "youtube", "x", "tiktok", "rss", "manual_csv"]
+ALL_SOURCES: List[SourceName] = ["google_news", "hacker_news", "github_releases", "github_commits", "reddit", "youtube", "x", "tiktok", "rss", "manual_csv"]
 LOGGER = logging.getLogger(__name__)
 
 
@@ -2718,6 +2718,9 @@ def source_status(source: SourceName) -> SourceStatus:
             configured=True,
             note="Uses the public GitHub Releases API for configured watched repositories; no API key is required.",
         )
+    if source == "github_commits":
+        from collectors.github_commits_collector import LAST_DIAGNOSTIC, auth_mode, watched_repositories
+        return SourceStatus(name=source, available=True, requires_api_key=False, configured=bool(watched_repositories()), note=f"Enabled public GitHub Commit Monitor for {len(watched_repositories())} repositories; auth={auth_mode()}; public mode has lower rate limits; last diagnostic={LAST_DIAGNOSTIC.get('status', 'never_run')}.")
     if source == "tiktok":
         return SourceStatus(
             name=source,

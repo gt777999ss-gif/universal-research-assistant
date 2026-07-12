@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from analyzers.report_builder import escape
 from exporters.report_exporter import export_report, export_workflow_report
+from models import SearchResult
 from research_workflows.store import save_workflow
 
 
@@ -119,11 +120,13 @@ def failed_workflow(workflow_id: str, payload: Dict[str, Any], started_at: str, 
 
 
 def build_workflow_report(topic: str, results: List[Dict[str, Any]], analysis: Dict[str, Any], template_name: str = "") -> Dict[str, Any]:
+    from collectors.github_commits_collector import group_commit_results
     source_distribution = analysis.get("source_breakdown", [])
     recency = recency_distribution(results)
     facts = [traceable_result(item) for item in results[:20]]
     interpretation = {"executive_summary": analysis.get("executive_summary", ""), "recurring_themes": analysis.get("key_findings", []), "trend_signals": analysis.get("trends", []), "risks": analysis.get("risks", []), "opportunities": analysis.get("opportunities", [])}
-    report = {"title": f"Research Workflow Report: {topic}", "template": template_name, "generated_at": now(), "executive_summary": analysis.get("executive_summary", ""), "top_stories": facts[:5], "source_distribution": source_distribution, "recency_distribution": recency, "platform_comparison": source_distribution, "risks": analysis.get("risks", []), "opportunities": analysis.get("opportunities", []), "recommended_follow_up_queries": analysis.get("recommended_follow_up_queries", []), "confidence_notes": "Interpretation is deterministic and based on collected public-source relevance, recurrence, and recency signals. Optional AI enhancement is only reflected when a configured provider succeeds.", "verified_source_facts": facts, "deterministic_interpretation": interpretation, "forecast_or_inference": {"30_day_outlook": "Inference only: monitor recurring high-score themes and source diversity over the next 30 days; this is not a verified source fact."}, "source_references": [item["url"] for item in facts if item["url"]], "analysis": analysis.get("ai_video_analysis", {}), "analysis_mode": analysis.get("analysis_mode", "deterministic"), "provider_metadata": analysis.get("provider_metadata", {}), "fallback_reason": analysis.get("fallback_reason", "")}
+    commit_results = [SearchResult(**item) for item in results if item.get("source") == "github_commits"]
+    report = {"title": f"Research Workflow Report: {topic}", "template": template_name, "generated_at": now(), "executive_summary": analysis.get("executive_summary", ""), "top_stories": facts[:5], "source_distribution": source_distribution, "recency_distribution": recency, "platform_comparison": source_distribution, "risks": analysis.get("risks", []), "opportunities": analysis.get("opportunities", []), "recommended_follow_up_queries": analysis.get("recommended_follow_up_queries", []), "confidence_notes": "Interpretation is deterministic and based on collected public-source relevance, recurrence, and recency signals. Optional AI enhancement is only reflected when a configured provider succeeds.", "verified_source_facts": facts, "deterministic_interpretation": interpretation, "forecast_or_inference": {"30_day_outlook": "Inference only: monitor recurring high-score themes and source diversity over the next 30 days; this is not a verified source fact."}, "source_references": [item["url"] for item in facts if item["url"]], "analysis": analysis.get("ai_video_analysis", {}), "analysis_mode": analysis.get("analysis_mode", "deterministic"), "provider_metadata": analysis.get("provider_metadata", {}), "fallback_reason": analysis.get("fallback_reason", ""), "github_development_signals": group_commit_results(commit_results), "raw_github_commits": [item.model_dump() for item in commit_results]}
     report["markdown"] = workflow_markdown(report)
     return report
 
@@ -175,6 +178,9 @@ def workflow_markdown(report: Dict[str, Any]) -> str:
         lines.extend(f"- **{item.get('horizon', '')}**: {item.get('forecast_statement', '')}" for item in analysis.get("forecasts", []))
         lines.extend(["", "## Watchlist", ""])
         lines.extend(f"- {item.get('product_company', '')}: {item.get('signal_to_monitor', '')}" for item in analysis.get("watchlist", []))
+    if report.get("github_development_signals"):
+        lines.extend(["", "## GitHub Development Signals", ""])
+        lines.extend(f"- **{item.get('canonical_title', '')}** ({item.get('repository', '')}, {item.get('importance', '')}, {item.get('commit_count', 0)} commit(s)): {item.get('summary', '')}" for item in report["github_development_signals"])
     return "\n".join(lines)
 
 

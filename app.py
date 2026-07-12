@@ -34,6 +34,7 @@ from analyzers.risk_analyzer import analyze_risks
 from analyzers.theme_extractor import cluster_similar_stories, extract_themes, source_breakdown
 from analyzers.trend_analyzer import analyze_trends
 from collectors import COLLECTORS
+from collectors.reddit_collector import reddit_configuration_status
 from collectors.youtube_collector import youtube_configuration_status
 from exporters.csv_exporter import export_csv
 from exporters.report_exporter import export_report
@@ -2352,7 +2353,11 @@ async def run_search_pipeline(request: ResearchRequest) -> Dict[str, Any]:
     original_queries = request.queries or ([request.query] if request.query else [])
     search_queries = expand_search_queries(original_queries)
     selected_sources = request.sources or DEFAULT_SOURCES
-    collectors = [(source, COLLECTORS[source]) for source in selected_sources if source in COLLECTORS]
+    collectors = [
+        (source, COLLECTORS[source])
+        for source in selected_sources
+        if source in COLLECTORS and (source != "reddit" or reddit_configuration_status()["available"])
+    ]
     per_source_limit = max(10, min(request.limit, 100))
     warnings = source_warnings(selected_sources)
 
@@ -2550,13 +2555,19 @@ def source_status(source: SourceName) -> SourceStatus:
         configured = bool(os.getenv("X_BEARER_TOKEN"))
         return SourceStatus(name=source, available=configured, requires_api_key=True, configured=configured)
     if source == "reddit":
-        configured = bool(os.getenv("REDDIT_CLIENT_ID", "").strip() and os.getenv("REDDIT_CLIENT_SECRET", "").strip())
+        reddit = reddit_configuration_status()
+        if not reddit["enabled"]:
+            note = "Disabled: set REDDIT_ENABLED=true and configure Reddit OAuth credentials to enable collection."
+        elif not reddit["oauth_configured"]:
+            note = "Disabled: REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, and REDDIT_USER_AGENT are all required."
+        else:
+            note = "Enabled with Reddit app-only OAuth."
         return SourceStatus(
             name=source,
-            available=True,
-            requires_api_key=False,
-            configured=configured,
-            note="Uses OAuth when REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET are configured; public 403 responses use an RSS fallback when available.",
+            available=reddit["available"],
+            requires_api_key=True,
+            configured=reddit["oauth_configured"],
+            note=note,
         )
     if source == "tiktok":
         return SourceStatus(

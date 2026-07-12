@@ -10,7 +10,8 @@ sources:
   google_news:
     enabled: true
   reddit:
-    enabled: true
+    enabled: false
+    enabled_env: REDDIT_ENABLED
     client_id_env: REDDIT_CLIENT_ID
     client_secret_env: REDDIT_CLIENT_SECRET
     user_agent_env: REDDIT_USER_AGENT

@@ -140,7 +140,7 @@ Each source has its own collector module and returns a common `SearchResult` mod
 | Source ID | Collector | Notes |
 |---|---|---|
 | `google_news` | `collectors/google_news_collector.py` | Uses public Google News RSS. |
-| `reddit` | `collectors/reddit_collector.py` | Uses Reddit OAuth when configured; public JSON 403 responses make one permitted RSS fallback attempt. |
+| `reddit` | `collectors/reddit_collector.py` | Disabled by default. Enable only with `REDDIT_ENABLED=true` and complete Reddit OAuth credentials. |
 | `youtube` | `collectors/youtube_collector.py` | Uses the official YouTube Data API when `YOUTUBE_API_KEY` is configured. |
 | `x` | `collectors/x_collector.py` | Uses the official X API when `X_BEARER_TOKEN` is configured. |
 | `tiktok` | `collectors/tiktok_public_collector.py` | Placeholder for public/official/licensed TikTok data only; no login scraping. |
@@ -200,6 +200,7 @@ Optional source API keys:
 
 ```bash
 YOUTUBE_API_KEY=...
+REDDIT_ENABLED=false
 REDDIT_CLIENT_ID=...
 REDDIT_CLIENT_SECRET=...
 REDDIT_USER_AGENT="python:your-app:1.0 (by /u/your_reddit_username)"
@@ -253,15 +254,16 @@ export X_BEARER_TOKEN="..."
 
 ### Reddit Diagnostics
 
-Create a Reddit app and configure its app-only OAuth credentials and a truthful, descriptive User-Agent:
+Reddit collection is disabled by default, so workflows continue without Reddit or a Reddit 403 warning. Create a Reddit app and configure all required values to opt in:
 
 ```bash
+export REDDIT_ENABLED=true
 export REDDIT_CLIENT_ID="..."
 export REDDIT_CLIENT_SECRET="..."
 export REDDIT_USER_AGENT="python:your-app:1.0 (by /u/your_reddit_username)"
 ```
 
-When both OAuth values are configured, the collector obtains and caches an app-only token, then calls `oauth.reddit.com`. Without OAuth credentials it tries the public JSON endpoint with `Accept: application/json`. A public HTTP 403 triggers one permitted RSS fallback attempt; it never bypasses access controls.
+When all four values are configured, the collector obtains and caches an app-only token, then calls `oauth.reddit.com`. If any value is absent, Reddit remains disabled and no Reddit request is made.
 
 Run a sanitized diagnostic:
 
@@ -269,7 +271,7 @@ Run a sanitized diagnostic:
 python3 scripts/test_reddit_source.py --query "AI video" --subreddit artificial
 ```
 
-The diagnostic prints the access mode (`oauth`, `public_json`, or `rss_fallback`) and never prints credentials or tokens. HTTP 403 commonly means public access is blocked from the deployment network or OAuth is required. HTTP 429 is rate limiting; the collector uses one bounded retry honoring `Retry-After`.
+The diagnostic prints the access mode (`oauth` or `disabled`) and never prints credentials or tokens. HTTP 403 commonly means Reddit rejected an enabled OAuth request. HTTP 429 is rate limiting; the collector uses one bounded retry honoring `Retry-After`.
 
 Enable Gemini AI enhancement by creating a Gemini API key and setting:
 

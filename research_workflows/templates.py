@@ -10,7 +10,7 @@ TEMPLATES: Dict[str, Dict[str, Any]] = {
         "description": "Weekly public-information briefing covering leading AI video platforms.",
         "topic": "AI video tools weekly developments",
         "queries": ["Google Veo", "Runway", "Kling AI", "Seedance", "Pika", "HeyGen", "Luma AI"],
-        "sources": ["google_news", "youtube", "reddit", "rss"],
+        "sources": ["google_news", "youtube", "rss"],
         "days": 7,
         "limit_per_source": 20,
         "output_formats": ["markdown", "html", "json"],

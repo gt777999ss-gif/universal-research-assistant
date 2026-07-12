@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-import html
 import logging
 import os
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
-from xml.etree import ElementTree
 
 import httpx
 
@@ -37,26 +35,25 @@ async def collect_reddit(query: str, days: int, limit: int, language: str, count
 
 
 async def collect_reddit_with_mode(query: str, days: int, limit: int, language: str, country: str) -> Tuple[List[SearchResult], str]:
+    if not reddit_collection_enabled() or not reddit_oauth_configured():
+        LOGGER.info("Reddit collection skipped because it is disabled or OAuth configuration is incomplete.")
+        return [], "disabled"
+
     subreddit, search_query = parse_query(query)
     params = search_params(search_query, days, limit, subreddit)
     headers = {"User-Agent": reddit_user_agent(), "Accept": "application/json"}
     credentials = reddit_credentials()
+    if not credentials:
+        return [], "disabled"
     async with http_client(headers) as client:
-        if credentials:
-            token = await access_token(client, credentials)
-            endpoint = search_endpoint(OAUTH_HOST, subreddit, "")
-            payload = await reddit_json_get(client, endpoint, params, {"Authorization": f"Bearer {token}"}, "oauth", query, subreddit)
-            return parse_json_results(payload, "oauth"), "oauth"
+        token = await access_token(client, credentials)
+        endpoint = search_endpoint(OAUTH_HOST, subreddit)
+        payload = await reddit_json_get(client, endpoint, params, {"Authorization": f"Bearer {token}"}, "oauth", query, subreddit)
+        return parse_json_results(payload, "oauth"), "oauth"
 
-        endpoint = search_endpoint(PUBLIC_HOST, subreddit, ".json")
-        try:
-            payload = await reddit_json_get(client, endpoint, params, {}, "public_json", query, subreddit)
-            return parse_json_results(payload, "public_json"), "public_json"
-        except RedditDataAPIError as exc:
-            if exc.category != "HTTP 403 blocked public access":
-                raise
-            LOGGER.info("Reddit public JSON was blocked; attempting permitted RSS fallback query=%r subreddit=%r", query, subreddit)
-            return await rss_fallback(client, search_query, days, limit, subreddit, query)
+
+def reddit_collection_enabled() -> bool:
+    return os.getenv("REDDIT_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def reddit_user_agent() -> str:
@@ -69,8 +66,19 @@ def reddit_credentials() -> Optional[Tuple[str, str]]:
     return (client_id, client_secret) if client_id and client_secret else None
 
 
+def reddit_oauth_configured() -> bool:
+    return bool(reddit_credentials() and os.getenv("REDDIT_USER_AGENT", "").strip())
+
+
 def reddit_configuration_status() -> Dict[str, Any]:
-    return {"oauth_configured": bool(reddit_credentials()), "user_agent_configured": bool(os.getenv("REDDIT_USER_AGENT", "").strip())}
+    enabled = reddit_collection_enabled()
+    oauth_configured = reddit_oauth_configured()
+    return {
+        "enabled": enabled,
+        "oauth_configured": oauth_configured,
+        "user_agent_configured": bool(os.getenv("REDDIT_USER_AGENT", "").strip()),
+        "available": enabled and oauth_configured,
+    }
 
 
 def parse_query(query: str) -> Tuple[str, str]:
@@ -92,8 +100,8 @@ def search_params(query: str, days: int, limit: int, subreddit: str = "") -> Dic
     return params
 
 
-def search_endpoint(host: str, subreddit: str, suffix: str) -> str:
-    return f"{host}/r/{subreddit}/search{suffix}" if subreddit else f"{host}/search{suffix}"
+def search_endpoint(host: str, subreddit: str) -> str:
+    return f"{host}/r/{subreddit}/search" if subreddit else f"{host}/search"
 
 
 async def access_token(client: httpx.AsyncClient, credentials: Tuple[str, str]) -> str:
@@ -145,7 +153,7 @@ async def reddit_json_get(client: httpx.AsyncClient, endpoint: str, params: Dict
             return payload
         except httpx.HTTPStatusError as exc:
             detail = reddit_error_detail(exc.response)
-            category = "HTTP 403 blocked public access" if exc.response.status_code == 403 and mode == "public_json" else "rate limit" if exc.response.status_code == 429 else f"HTTP {exc.response.status_code}"
+            category = "rate limit" if exc.response.status_code == 429 else f"HTTP {exc.response.status_code}"
             LOGGER.warning("Reddit request host=%s mode=%s query=%r subreddit=%r status=%s error=%s", exc.request.url.host, mode, query, subreddit, exc.response.status_code, detail)
             raise RedditDataAPIError(category, detail) from exc
         except httpx.TimeoutException as exc:
@@ -158,44 +166,11 @@ async def reddit_json_get(client: httpx.AsyncClient, endpoint: str, params: Dict
     raise RedditDataAPIError("rate limit", "request remained rate limited after one retry.")
 
 
-async def rss_fallback(client: httpx.AsyncClient, query: str, days: int, limit: int, subreddit: str, original_query: str) -> Tuple[List[SearchResult], str]:
-    endpoint = search_endpoint(PUBLIC_HOST, subreddit, ".rss")
-    params = {"q": query, "sort": "new", "t": reddit_window(days), "restrict_sr": "on" if subreddit else "off"}
-    try:
-        response = await client.get(endpoint, params=params, headers={"Accept": "application/atom+xml"})
-        response.raise_for_status()
-        results = parse_rss_results(response.text, limit)
-        LOGGER.info("Reddit request host=%s mode=rss_fallback query=%r subreddit=%r status=%s result_count=%s", response.request.url.host, original_query, subreddit, response.status_code, len(results))
-        return results, "rss_fallback"
-    except httpx.HTTPStatusError as exc:
-        detail = reddit_error_detail(exc.response)
-        LOGGER.warning("Reddit RSS fallback host=%s status=%s error=%s", exc.request.url.host, exc.response.status_code, detail)
-        raise RedditDataAPIError("rss fallback unavailable", f"HTTP {exc.response.status_code}: {detail}") from exc
-    except httpx.TimeoutException as exc:
-        raise RedditDataAPIError("timeout", "RSS fallback request timed out.") from exc
-    except (httpx.HTTPError, ValueError, ElementTree.ParseError) as exc:
-        raise RedditDataAPIError("rss fallback malformed response", "RSS fallback request failed.") from exc
-
-
 def parse_json_results(payload: Dict[str, Any], mode: str) -> List[SearchResult]:
     results: List[SearchResult] = []
     for child in payload["data"]["children"]:
         data = child.get("data", {}) if isinstance(child, dict) else {}
         results.append(build_result(data, mode))
-    return results
-
-
-def parse_rss_results(xml_text: str, limit: int) -> List[SearchResult]:
-    root = ElementTree.fromstring(xml_text)
-    ns = {"atom": "http://www.w3.org/2005/Atom"}
-    results: List[SearchResult] = []
-    for entry in root.findall("atom:entry", ns)[:limit]:
-        title = entry.findtext("atom:title", default="Untitled Reddit post", namespaces=ns)
-        link = next((item.get("href", "") for item in entry.findall("atom:link", ns) if item.get("rel", "alternate") == "alternate"), "")
-        author = entry.findtext("atom:author/atom:name", default="", namespaces=ns)
-        updated = entry.findtext("atom:updated", default="", namespaces=ns)
-        content = strip_markup(entry.findtext("atom:content", default="", namespaces=ns))
-        results.append(SearchResult(source="reddit", title=html.unescape(title), url=link, author=author, date=updated or None, summary=content or html.unescape(title), full_text=content, image_url="", video_url="", likes=None, comments=None, shares=None, views=None, reason_selected="Collected from permitted Reddit RSS fallback after public JSON access was blocked.", tags=["reddit", "rss_fallback"]))
     return results
 
 
@@ -235,7 +210,3 @@ def reddit_window(days: int) -> str:
     if days <= 365:
         return "year"
     return "all"
-
-
-def strip_markup(value: str) -> str:
-    return " ".join(re.sub(r"<[^>]+>", " ", value).split())

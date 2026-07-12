@@ -215,6 +215,14 @@ Use `ARXIV_ENABLED`, `ARXIV_MAX_RESULTS`, and `ARXIV_LOOKBACK_DAYS` to control c
 python3 scripts/test_huggingface_models.py --days 30 --limit 20
 ```
 
+### GitHub Trending
+
+`github_trending` uses the official GitHub Search Repositories API as a recent-popularity proxy because GitHub does not provide an official Trending API. It searches recently pushed AI-video repositories and ranks them by relevance, stars, and recency without authentication.
+
+```bash
+python3 scripts/test_github_trending.py
+```
+
 ## Analyzer Modules
 
 V9 analysis and agent planning remain deterministic by default. AI enhancement is optional and only runs when `use_ai: true` and a configured provider key is available. Missing or invalid AI keys never block report generation.

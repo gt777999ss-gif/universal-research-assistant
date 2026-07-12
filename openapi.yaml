@@ -1711,6 +1711,7 @@ components:
             - hacker_news
             - github_releases
             - github_commits
+            - github_trending
             - arxiv
             - huggingface_models
             - rss
@@ -1803,6 +1804,7 @@ components:
             - hacker_news
             - github_releases
             - github_commits
+            - github_trending
             - arxiv
             - huggingface_models
             - rss
@@ -1887,6 +1889,7 @@ components:
             - hacker_news
             - github_releases
             - github_commits
+            - github_trending
             - arxiv
             - huggingface_models
             - rss
@@ -1992,6 +1995,7 @@ components:
             - hacker_news
             - github_releases
             - github_commits
+            - github_trending
             - arxiv
             - huggingface_models
             - rss
@@ -2216,6 +2220,7 @@ components:
             - hacker_news
             - github_releases
             - github_commits
+            - github_trending
             - arxiv
             - huggingface_models
             - rss
@@ -2891,6 +2896,7 @@ components:
             - hacker_news
             - github_releases
             - github_commits
+            - github_trending
             - arxiv
             - huggingface_models
             - rss
@@ -3234,6 +3240,7 @@ components:
             - hacker_news
             - github_releases
             - github_commits
+            - github_trending
             - arxiv
             - huggingface_models
             - rss
@@ -3370,6 +3377,7 @@ components:
             - hacker_news
             - github_releases
             - github_commits
+            - github_trending
             - arxiv
             - huggingface_models
             - rss
@@ -3524,6 +3532,7 @@ components:
               - hacker_news
               - github_releases
               - github_commits
+              - github_trending
               - arxiv
               - huggingface_models
               - rss
@@ -3754,6 +3763,7 @@ components:
             - hacker_news
             - github_releases
             - github_commits
+            - github_trending
             - arxiv
             - huggingface_models
             - rss
@@ -4026,6 +4036,7 @@ components:
             - hacker_news
             - github_releases
             - github_commits
+            - github_trending
             - arxiv
             - huggingface_models
             - rss
@@ -4090,6 +4101,7 @@ components:
             - hacker_news
             - github_releases
             - github_commits
+            - github_trending
             - arxiv
             - huggingface_models
             - rss
@@ -4340,6 +4352,7 @@ components:
             - hacker_news
             - github_releases
             - github_commits
+            - github_trending
             - arxiv
             - huggingface_models
             - rss
@@ -4645,6 +4658,27 @@ components:
           title: Description
           description: Public model description when available.
           default: ''
+        language:
+          type: string
+          title: Language
+          description: Repository language when available.
+          default: ''
+        stars:
+          type: integer
+          title: Stars
+          description: Public repository stars when available.
+          default: 0
+        stars_today:
+          type: integer
+          title: Stars Today
+          description: Public daily star growth when available.
+          default: 0
+        topics:
+          items:
+            type: string
+          type: array
+          title: Topics
+          description: Public repository topics when available.
         author:
           type: string
           title: Author
@@ -4749,6 +4783,7 @@ components:
           - hacker_news
           - github_releases
           - github_commits
+          - github_trending
           - arxiv
           - huggingface_models
           - rss
@@ -4827,6 +4862,7 @@ components:
             - hacker_news
             - github_releases
             - github_commits
+            - github_trending
             - arxiv
             - huggingface_models
             - rss

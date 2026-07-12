@@ -48,6 +48,10 @@ sources:
   huggingface_models:
     enabled: true
     max_results: 30
+  github_trending:
+    enabled: true
+    approach: official_github_search_api_recent_popularity_proxy
+    max_results: 30
   rss:
     enabled: true
     # Verified 2026-07-11 with RSS/Atom Accept headers.

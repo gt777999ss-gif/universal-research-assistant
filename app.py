@@ -72,14 +72,14 @@ from research_workflows.templates import get_template, list_templates
 from scheduler.scheduler import MonitorScheduler
 
 
-SourceName = Literal["youtube", "x", "tiktok", "reddit", "google_news", "hacker_news", "github_releases", "github_commits", "arxiv", "huggingface_models", "rss", "manual_csv"]
+SourceName = Literal["youtube", "x", "tiktok", "reddit", "google_news", "hacker_news", "github_releases", "github_commits", "github_trending", "arxiv", "huggingface_models", "rss", "manual_csv"]
 AnalysisType = Literal["general", "trend", "market", "competitor", "customer_feedback", "risk", "opportunity"]
 MonitorFrequency = Literal["hourly", "daily", "weekly"]
 NotificationChannel = Literal["email", "telegram", "discord", "webhook"]
 AIProviderName = Literal["auto", "gemini", "openai", "none"]
 ReportExportFormat = Literal["markdown", "html", "json", "pdf"]
 DEFAULT_SOURCES: List[SourceName] = ["google_news"]
-ALL_SOURCES: List[SourceName] = ["google_news", "hacker_news", "github_releases", "github_commits", "arxiv", "huggingface_models", "reddit", "youtube", "x", "tiktok", "rss", "manual_csv"]
+ALL_SOURCES: List[SourceName] = ["google_news", "hacker_news", "github_releases", "github_commits", "github_trending", "arxiv", "huggingface_models", "reddit", "youtube", "x", "tiktok", "rss", "manual_csv"]
 LOGGER = logging.getLogger(__name__)
 
 
@@ -2725,6 +2725,8 @@ def source_status(source: SourceName) -> SourceStatus:
         return SourceStatus(name=source, available=True, requires_api_key=False, configured=True, note="Uses the official public arXiv API for date-filtered AI-video research; no API key is required.")
     if source == "huggingface_models":
         return SourceStatus(name=source, available=True, requires_api_key=False, configured=True, note="Uses the public Hugging Face models API for filtered AI-video model signals; no API key is required.")
+    if source == "github_trending":
+        return SourceStatus(name=source, available=True, requires_api_key=False, configured=True, note="Uses the official GitHub Search API as a recent-popularity proxy because GitHub has no official Trending API; no API key is required.")
     if source == "tiktok":
         return SourceStatus(
             name=source,

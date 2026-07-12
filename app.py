@@ -2583,7 +2583,7 @@ def source_status(source: SourceName) -> SourceStatus:
             available=True,
             requires_api_key=False,
             configured=True,
-            note="Collects public RSS feed URLs when the query is an RSS URL.",
+            note="Collects configured verified public feeds and direct public RSS/Atom feed URLs.",
         )
     return SourceStatus(name=source, available=True, requires_api_key=False, configured=True)
 

@@ -149,6 +149,21 @@ Each source has its own collector module and returns a common `SearchResult` mod
 
 Results are merged, filtered for spam/ads/irrelevance, deduplicated by URL and similar titles, then sorted by relevance and recency. Missing optional API keys produce warnings instead of request failures.
 
+### RSS Sources And Cleaning
+
+The configured RSS sources are verified public feeds from OpenAI News and the Google AI Blog. RSS supports RSS 2.0, Atom, and RDF/RSS 1.0-style `item` entries; `content:encoded`, categories, authors, dates, and media URLs are normalized when present. Google DeepMind, Runway, Luma, Pika, and HeyGen remain disabled until an official public feed URL is verified.
+
+RSS requests use a descriptive User-Agent, XML Accept header, redirects, bounded retry/backoff, and classified `403`, `404`, `429`, timeout, malformed XML, and empty-feed outcomes. A failed feed is recorded in diagnostics while other configured feeds continue.
+
+HTML is cleaned before filtering and analysis: scripts, styles, navigation, headers, footers, hidden elements, attributes, and boilerplate are removed; entities and readable paragraph boundaries are preserved. Theme extraction uses token-aware stopwords, so markup terms such as `href`, `target`, `font`, and `style` cannot become trends.
+
+```bash
+python3 scripts/test_rss_source.py --query "AI video" --limit 10
+python3 scripts/test_html_cleaning.py
+```
+
+To add a feed, first verify that it is an official public RSS/Atom/XML URL with an XML content type or parseable feed body. Add it under `sources.rss.feeds` in `config/settings.yaml` with `enabled: true`; otherwise add only a disabled entry and a verification note.
+
 ## Analyzer Modules
 
 V9 analysis and agent planning remain deterministic by default. AI enhancement is optional and only runs when `use_ai: true` and a configured provider key is available. Missing or invalid AI keys never block report generation.

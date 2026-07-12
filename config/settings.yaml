@@ -9,6 +9,33 @@ sources:
     api_key_env: YOUTUBE_API_KEY
   google_news:
     enabled: true
+  rss:
+    enabled: true
+    # Verified 2026-07-11 with RSS/Atom Accept headers.
+    feeds:
+      - name: OpenAI News
+        url: https://openai.com/news/rss.xml
+        enabled: true
+      - name: Google AI Blog
+        url: https://blog.google/technology/ai/rss/
+        enabled: true
+    # No verified official public RSS URL was available at configuration time.
+    disabled_feeds:
+      - name: Google DeepMind Blog
+        enabled: false
+        note: Enable only after verifying an official feed URL.
+      - name: Runway Blog
+        enabled: false
+        note: Enable only after verifying an official feed URL.
+      - name: Luma Blog
+        enabled: false
+        note: Enable only after verifying an official feed URL.
+      - name: Pika Blog
+        enabled: false
+        note: Enable only after verifying an official feed URL.
+      - name: HeyGen Blog
+        enabled: false
+        note: Enable only after verifying an official feed URL.
   reddit:
     enabled: false
     enabled_env: REDDIT_ENABLED

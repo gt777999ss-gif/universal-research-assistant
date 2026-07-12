@@ -5,6 +5,8 @@ from typing import Any, Dict, Iterable, List
 
 import yaml
 
+from processors.text_cleaning import clean_html_text
+
 
 def load_processing_settings() -> Dict[str, Any]:
     with open("config/settings.yaml", "r", encoding="utf-8") as handle:
@@ -12,7 +14,7 @@ def load_processing_settings() -> Dict[str, Any]:
 
 
 def normalize_text(value: str) -> str:
-    value = value.lower()
+    value = clean_html_text(value).lower()
     value = re.sub(r"https?://\S+", " ", value)
     value = re.sub(r"[^a-z0-9\u0e00-\u0e7f\u4e00-\u9fff]+", " ", value)
     return " ".join(value.split())

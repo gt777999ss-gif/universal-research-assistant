@@ -10,6 +10,9 @@ from processors.ranker import parsed_timestamp
 STOPWORDS = {
     "the", "and", "for", "with", "from", "that", "this", "are", "was", "you",
     "your", "about", "into", "latest", "recent", "news", "how", "what", "why",
+    "href", "target", "font", "style", "class", "div", "span", "img", "src", "width",
+    "height", "rel", "script", "javascript", "css", "cookie", "privacy", "subscribe",
+    "newsletter", "login", "menu",
 }
 
 
